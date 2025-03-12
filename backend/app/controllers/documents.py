@@ -76,36 +76,77 @@ def upload_document():
 @documents_bp.route('/', methods=['GET'])
 @jwt_required()
 def get_documents():
-    user_id = get_jwt_identity()
+    print("\n\n================= DOCUMENT REQUEST =================")
+    print("Headers received:")
+    for header, value in request.headers.items():
+        print(f"  {header}: {value}")
     
-    # Get documents for the current user
-    documents = list(db.documents.find({"user_id": user_id}))
+    # Extract and verify authorization header
+    auth_header = request.headers.get('Authorization', 'NONE')
+    print(f"\nAuthorization header: {auth_header}")
     
-    # Convert ObjectId to string for JSON serialization
-    for doc in documents:
-        doc['_id'] = str(doc['_id'])
-        doc['upload_date'] = doc['upload_date'].isoformat()
+    if auth_header == 'NONE':
+        print("ERROR: No Authorization header present")
+    elif not auth_header.startswith('Bearer '):
+        print("ERROR: Authorization header doesn't start with 'Bearer '")
+    else:
+        token = auth_header[7:]
+        print(f"Extracted token: {token[:15]}...")
     
-    return jsonify({"documents": documents}), 200
-
-@documents_bp.route('/<document_id>', methods=['GET'])
-@jwt_required()
-def get_document(document_id):
+    # Get user ID from JWT token
     try:
         user_id = get_jwt_identity()
+        print(f"JWT identity (user_id): {user_id}")
         
-        document = db.documents.find_one({"_id": ObjectId(document_id), "user_id": user_id})
-        if not document:
-            return jsonify({"message": "Document not found"}), 404
+        # Get documents for the current user
+        documents = list(db.documents.find({"user_id": user_id}))
+        print(f"Found {len(documents)} documents for user")
         
         # Convert ObjectId to string for JSON serialization
-        document['_id'] = str(document['_id'])
-        if 'upload_date' in document:
-            document['upload_date'] = document['upload_date'].isoformat()
+        for doc in documents:
+            doc['_id'] = str(doc['_id'])
+            doc['upload_date'] = doc['upload_date'].isoformat()
         
-        return jsonify({"document": document}), 200
+        return jsonify({"documents": documents}), 200
     except Exception as e:
-        return jsonify({"message": f"Error retrieving document: {str(e)}"}), 500
+        print(f"ERROR in JWT processing: {str(e)}")
+        return jsonify({"message": f"Authentication error: {str(e)}"}), 401
+        
+ 
+
+# @documents_bp.route('/', methods=['GET'])
+# @jwt_required()
+# def get_documents():
+#     print("\n== DETAILED JWT DEBUG ==")
+#     print("All headers received:")
+#     for header, value in request.headers.items():
+#         print(f"  {header}: {value}")
+    
+#     auth_header = request.headers.get('Authorization', 'NONE')
+#     print(f"Authorization header: {auth_header}")
+    
+#     if auth_header.startswith('Bearer '):
+#         token = auth_header[7:]
+#         print(f"Extracted token (first 15 chars): {token[:15]}...")
+#     else:
+    #     print("WARNING: Authorization header doesn't start with 'Bearer '")
+    
+    # try:
+    #     user_id = get_jwt_identity()
+    #     print(f"JWT identity (user_id): {user_id}")
+        
+    #     # Continue with the rest of your function
+    #     documents = list(db.documents.find({"user_id": user_id}))
+        
+    #     # Convert ObjectId to string for JSON serialization
+    #     for doc in documents:
+    #         doc['_id'] = str(doc['_id'])
+    #         doc['upload_date'] = doc['upload_date'].isoformat()
+        
+    #     return jsonify({"documents": documents}), 200
+    # except Exception as e:
+    #     print(f"ERROR in JWT processing: {str(e)}")
+    #     return jsonify({"message": f"Authentication error: {str(e)}"}), 401
 
 # Add route to generate document summary
 @documents_bp.route('/<document_id>/summarize', methods=['POST'])
@@ -148,3 +189,44 @@ def extract_document_info(document_id):
         return jsonify({"message": "Key information extracted successfully", "key_info": key_info}), 200
     except Exception as e:
         return jsonify({"message": f"Error extracting key information: {str(e)}"}), 500
+
+# Add OPTIONS routes to handle CORS preflight requests
+@documents_bp.route('/', methods=['OPTIONS'])
+def options_documents():
+    # Just handle OPTIONS preflight request
+    return {}, 200
+
+@documents_bp.route('/<document_id>', methods=['OPTIONS'])
+def options_document_detail():
+    # Handle OPTIONS for document detail routes
+    return {}, 200
+
+@documents_bp.route('/<document_id>/summarize', methods=['OPTIONS'])
+def options_document_summarize():
+    # Handle OPTIONS for summarize route
+    return {}, 200
+
+@documents_bp.route('/<document_id>/extract-info', methods=['OPTIONS'])
+def options_document_extract_info():
+    # Handle OPTIONS for extract-info route
+    return {}, 200
+
+@documents_bp.route('/<document_id>', methods=['GET'])
+@jwt_required()
+def get_document(document_id):
+    try:
+        user_id = get_jwt_identity()
+        
+        # Verify document exists and belongs to current user
+        document = db.documents.find_one({"_id": ObjectId(document_id), "user_id": user_id})
+        if not document:
+            return jsonify({"message": "Document not found"}), 404
+        
+        # Convert ObjectId to string for JSON serialization
+        document['_id'] = str(document['_id'])
+        if 'upload_date' in document:
+            document['upload_date'] = document['upload_date'].isoformat()
+        
+        return jsonify({"document": document}), 200
+    except Exception as e:
+        return jsonify({"message": f"Error retrieving document: {str(e)}"}), 500
