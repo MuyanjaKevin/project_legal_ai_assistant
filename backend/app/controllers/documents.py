@@ -43,6 +43,9 @@ def upload_document():
     if not allowed_file(file.filename):
         return jsonify({"message": f"File type not allowed. Allowed types: {', '.join(ALLOWED_EXTENSIONS)}"}), 400
     
+    # Get category from form data
+    category = request.form.get('category', 'Uncategorized')
+    
     # Save file
     filename = secure_filename(file.filename)
     timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
@@ -58,7 +61,8 @@ def upload_document():
         "user_id": user_id,
         "file_type": filename.rsplit('.', 1)[1].lower(),
         "status": "uploaded",
-        "processed": False
+        "processed": False,
+        "category": category
     }
     
     result = db.documents.insert_one(document)
@@ -113,40 +117,32 @@ def get_documents():
         return jsonify({"message": f"Authentication error: {str(e)}"}), 401
         
  
-
-# @documents_bp.route('/', methods=['GET'])
-# @jwt_required()
-# def get_documents():
-#     print("\n== DETAILED JWT DEBUG ==")
-#     print("All headers received:")
-#     for header, value in request.headers.items():
-#         print(f"  {header}: {value}")
+@documents_bp.route('/categories', methods=['GET'])
+@jwt_required()
+def get_categories():
+    user_id = get_jwt_identity()
     
-#     auth_header = request.headers.get('Authorization', 'NONE')
-#     print(f"Authorization header: {auth_header}")
+    # Get unique categories used by this user
+    categories = db.documents.distinct("category", {"user_id": user_id})
     
-#     if auth_header.startswith('Bearer '):
-#         token = auth_header[7:]
-#         print(f"Extracted token (first 15 chars): {token[:15]}...")
-#     else:
-    #     print("WARNING: Authorization header doesn't start with 'Bearer '")
+    # Add default categories if they don't exist
+    default_categories = [
+        "Uncategorized", 
+        "Contract", 
+        "NDA", 
+        "Agreement", 
+        "Employment", 
+        "Legal Brief",
+        "Terms of Service",
+        "Privacy Policy",
+        "License"
+    ]
     
-    # try:
-    #     user_id = get_jwt_identity()
-    #     print(f"JWT identity (user_id): {user_id}")
-        
-    #     # Continue with the rest of your function
-    #     documents = list(db.documents.find({"user_id": user_id}))
-        
-    #     # Convert ObjectId to string for JSON serialization
-    #     for doc in documents:
-    #         doc['_id'] = str(doc['_id'])
-    #         doc['upload_date'] = doc['upload_date'].isoformat()
-        
-    #     return jsonify({"documents": documents}), 200
-    # except Exception as e:
-    #     print(f"ERROR in JWT processing: {str(e)}")
-    #     return jsonify({"message": f"Authentication error: {str(e)}"}), 401
+    # Combine user categories with defaults, remove duplicates
+    all_categories = list(set(categories + default_categories))
+    all_categories.sort()
+    
+    return jsonify({"categories": all_categories}), 200
 
 # Add route to generate document summary
 @documents_bp.route('/<document_id>/summarize', methods=['POST'])
@@ -190,10 +186,48 @@ def extract_document_info(document_id):
     except Exception as e:
         return jsonify({"message": f"Error extracting key information: {str(e)}"}), 500
 
+# Add DELETE endpoint for document deletion
+@documents_bp.route('/<document_id>', methods=['DELETE'])
+@jwt_required()
+def delete_document(document_id):
+    try:
+        user_id = get_jwt_identity()
+        
+        # Verify document ownership
+        document = db.documents.find_one({"_id": ObjectId(document_id), "user_id": user_id})
+        if not document:
+            return jsonify({"message": "Document not found"}), 404
+        
+        # Get file path before deleting from DB
+        file_path = document.get('file_path')
+        
+        # Delete document from database
+        result = db.documents.delete_one({"_id": ObjectId(document_id), "user_id": user_id})
+        
+        if result.deleted_count == 0:
+            return jsonify({"message": "Failed to delete document"}), 500
+        
+        # Delete the file from file system if it exists
+        if file_path and os.path.exists(file_path):
+            try:
+                os.remove(file_path)
+            except Exception as e:
+                # Don't fail the request if file deletion fails
+                print(f"Warning: Could not delete file {file_path}: {str(e)}")
+        
+        return jsonify({"message": "Document deleted successfully"}), 200
+    except Exception as e:
+        return jsonify({"message": f"Error deleting document: {str(e)}"}), 500
+
 # Add OPTIONS routes to handle CORS preflight requests
 @documents_bp.route('/', methods=['OPTIONS'])
 def options_documents():
     # Just handle OPTIONS preflight request
+    return {}, 200
+
+@documents_bp.route('/categories', methods=['OPTIONS'])
+def options_categories():
+    # Handle OPTIONS for categories route
     return {}, 200
 
 @documents_bp.route('/<document_id>', methods=['OPTIONS'])
