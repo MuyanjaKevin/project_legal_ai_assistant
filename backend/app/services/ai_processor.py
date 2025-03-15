@@ -339,3 +339,95 @@ def extract_key_info(document_id):
     except Exception as e:
         print(f"Error extracting key info: {e}")
         return None
+    
+def suggest_document_category(document_id):
+    """Suggest a document category based on content analysis"""
+    db = get_database()
+    
+    # Check if document exists
+    document = db.documents.find_one({"_id": document_id})
+    if not document:
+        return None
+        
+    # Check if text has been extracted
+    if "extracted_text" not in document:
+        return "Text extraction needed before categorization"
+    
+    extracted_text = document["extracted_text"]
+    
+    # Limit input tokens to control costs
+    max_input_tokens = 1500
+    input_char_limit = max_input_tokens * 4
+    
+    # Get important parts of the document
+    # Beginning often contains the document type/title
+    beginning = extracted_text[:input_char_limit]
+    
+    # Estimate token usage and cost
+    estimated_input_tokens = count_tokens(beginning)
+    estimated_output_tokens = 10  # We only need a short response
+    estimated_cost = estimate_cost(estimated_input_tokens, estimated_output_tokens)
+    
+    print(f"Document: {document.get('name', 'Unknown')}")
+    print(f"Estimated API call cost: ${estimated_cost:.4f}")
+    print(f"Input tokens (est): {estimated_input_tokens}, Output tokens (limit): {estimated_output_tokens}")
+    
+    try:
+        # Call OpenAI API with controlled output tokens
+        response = openai.chat.completions.create(
+            model="gpt-3.5-turbo",  # Use cheaper model
+            messages=[
+                {"role": "system", "content": "You are a legal document classifier. Analyze the text and determine the document type from these categories only: 'NDA', 'Contract', 'Agreement', 'Employment', 'Legal Brief', 'Terms of Service', 'Privacy Policy', 'License', or 'Other'."},
+                {"role": "user", "content": f"Based on the following document text, classify it into one of these categories: NDA, Contract, Agreement, Employment, Legal Brief, Terms of Service, Privacy Policy, License, or Other. Return only the category name.\n\n{beginning}"}
+            ],
+            max_tokens=10  # Limit output tokens
+        )
+        
+        # Get category from response
+        suggested_category = response.choices[0].message.content.strip()
+        
+        # Normalize the category
+        suggested_category = suggested_category.strip('".,;:').strip()
+        if suggested_category.lower() == "nda" or "non-disclosure" in suggested_category.lower():
+            suggested_category = "NDA"
+        elif "privacy" in suggested_category.lower():
+            suggested_category = "Privacy Policy"
+        elif "service" in suggested_category.lower() or "tos" in suggested_category.lower():
+            suggested_category = "Terms of Service"
+        elif "employment" in suggested_category.lower():
+            suggested_category = "Employment"
+        elif "license" in suggested_category.lower():
+            suggested_category = "License"
+        elif "contract" in suggested_category.lower():
+            suggested_category = "Contract"
+        elif "agreement" in suggested_category.lower():
+            suggested_category = "Agreement"
+        elif "brief" in suggested_category.lower() or "legal brief" in suggested_category.lower():
+            suggested_category = "Legal Brief"
+        else:
+            suggested_category = "Other"
+        
+        # Log usage for tracking
+        actual_usage = response.usage
+        actual_cost = estimate_cost(actual_usage.prompt_tokens, actual_usage.completion_tokens)
+        
+        usage_entry = {
+            "document_id": str(document_id),
+            "document_name": document.get("name", "Unknown"),
+            "operation": "categorize",
+            "timestamp": datetime.now().isoformat(),
+            "prompt_tokens": actual_usage.prompt_tokens,
+            "completion_tokens": actual_usage.completion_tokens,
+            "total_tokens": actual_usage.total_tokens,
+            "estimated_cost": estimated_cost,
+            "actual_cost": actual_cost
+        }
+        api_usage_log.append(usage_entry)
+        
+        print(f"Actual API call cost: ${actual_cost:.4f}")
+        print(f"Suggested category: {suggested_category}")
+        
+        return suggested_category
+    except Exception as e:
+        print(f"Error suggesting category: {e}")
+        return "Other"

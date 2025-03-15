@@ -297,3 +297,363 @@ body {
   background: #f3f4f6;
   color: #1f2937;
 }
+/* Add to your existing CSS files or create a new one */
+
+/* Category Select Styling */
+.category-select {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 16px;
+  margin-top: 5px;
+}
+
+.new-category-input {
+  margin-top: 5px;
+}
+
+.new-category-input input {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 16px;
+}
+
+/* Dashboard Category Filter */
+.filter-container {
+  margin: 20px 0;
+  display: flex;
+  align-items: center;
+}
+
+.filter-container label {
+  margin-right: 10px;
+  font-weight: 500;
+}
+
+.category-filter {
+  padding: 8px 12px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 16px;
+  min-width: 200px;
+}
+
+/* Category Badge on Document Cards */
+.category-badge {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background-color: #4285f4;
+  color: white;
+  padding: 3px 8px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+/* Update document-card to have relative positioning */
+.document-card {
+  position: relative;
+  /* ... rest of your existing styles ... */
+}
+/* Add these styles to your CSS */
+.category-tag {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  background-color: rgba(255, 255, 255, 0.3);
+  color: white;
+  padding: 0.4rem 0.8rem;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  backdrop-filter: blur(5px);
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+.document-meta p {
+  display: flex;
+  align-items: center;
+}
+
+.document-meta p::before {
+  content: '';
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background-color: rgba(255, 255, 255, 0.5);
+  margin-right: 8px;
+}
+/* Styling for Key Information display */
+.info-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 10px;
+}
+
+.info-row {
+  border-bottom: 1px solid #eee;
+}
+
+.info-row:last-child {
+  border-bottom: none;
+}
+
+.info-label {
+  width: 30%;
+  padding: 12px 10px;
+  font-weight: 600;
+  color: #444;
+  background-color: #f8f9fa;
+  text-transform: capitalize;
+}
+
+.info-value {
+  padding: 12px 15px;
+  color: #333;
+}
+
+.key-info-container {
+  background-color: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+  margin-bottom: 30px;
+  overflow: hidden;
+}
+
+.key-info-container h3 {
+  margin: 0;
+  padding: 15px 20px;
+  background-color: #f0f4f8;
+  color: #2c3e50;
+  font-size: 18px;
+  border-bottom: 1px solid #e1e8ed;
+}
+
+.key-info-content {
+  padding: 0;
+}
+/* Improved Key Information styling */
+.key-info-container {
+  background-color: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+  margin-bottom: 25px;
+}
+
+.key-info-container h3 {
+  background-color: #f5f7fa;
+  color: #2c3e50;
+  padding: 15px 20px;
+  margin: 0;
+  border-bottom: 1px solid #e1e8ed;
+  font-size: 18px;
+}
+
+.key-info-content {
+  padding: 15px 20px;
+}
+
+.info-list {
+  margin: 0;
+  padding: 0;
+}
+
+.info-item {
+  padding: 10px 0;
+  border-bottom: 1px solid #eee;
+  display: flex;
+  flex-wrap: wrap;
+}
+
+.info-item:last-child {
+  border-bottom: none;
+}
+
+.info-term {
+  font-weight: 600;
+  color: #444;
+  width: 30%;
+  min-width: 150px;
+  text-transform: capitalize;
+  margin: 0;
+}
+
+.info-definition {
+  margin: 0;
+  color: #333;
+  width: 65%;
+}
+
+.formatted-text {
+  white-space: pre-wrap;
+  font-family: inherit;
+  line-height: 1.5;
+  color: #333;
+}
+/* Delete button styling */
+.delete-button {
+  background-color: #dc3545 !important;
+  color: white;
+}
+
+.delete-button:hover {
+  background-color: #bd2130 !important;
+}
+
+/* Modal overlay for delete confirmation */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.delete-confirmation {
+  background-color: white;
+  padding: 20px;
+  border-radius: 8px;
+  max-width: 500px;
+  width: 90%;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.delete-confirmation h3 {
+  margin-top: 0;
+  color: #dc3545;
+}
+
+.delete-confirmation-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.cancel-button {
+  padding: 8px 16px;
+  background-color: #f1f1f1;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.delete-confirm-button {
+  padding: 8px 16px;
+  background-color: #dc3545;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.delete-confirm-button:disabled {
+  background-color: #e6a8ad;
+  cursor: not-allowed;
+}
+/* Delete button styling */
+.delete-button {
+  background-color: #dc3545 !important;
+  color: white;
+}
+
+.delete-button:hover {
+  background-color: #bd2130 !important;
+}
+
+.delete-link {
+  color: #d32f2f;
+  background: none;
+  border: none;
+  padding: 0;
+  margin-left: 10px;
+  font: inherit;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.delete-link:hover {
+  color: #b71c1c;
+}
+
+/* Modal overlay for delete confirmation */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.delete-confirmation {
+  background-color: white;
+  padding: 20px;
+  border-radius: 8px;
+  max-width: 500px;
+  width: 90%;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.delete-confirmation h3 {
+  margin-top: 0;
+  color: #dc3545;
+}
+
+.delete-confirmation-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.cancel-button {
+  padding: 8px 16px;
+  background-color: #f1f1f1;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.delete-confirm-button {
+  padding: 8px 16px;
+  background-color: #dc3545;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.delete-confirm-button:disabled {
+  background-color: #e6a8ad;
+  cursor: not-allowed;
+}
+/* Add to your App.css or the relevant CSS file */
+.auto-category-toggle {
+  display: flex;
+  align-items: center;
+  margin-top: 10px;
+}
+
+.auto-category-toggle input[type="checkbox"] {
+  margin-right: 10px;
+}
+
+.auto-category-toggle label {
+  font-weight: normal;
+  cursor: pointer;
+}

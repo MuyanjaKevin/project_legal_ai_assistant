@@ -1,11 +1,15 @@
-// src/pages/Dashboard.js - Completely revamped logout handling
+// src/pages/Dashboard.js
 import React, { useState, useEffect, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { deleteDocument } from '../services/api';
 
 const Dashboard = () => {
   const [documents, setDocuments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [documentToDelete, setDocumentToDelete] = useState(null);
+  const [deleting, setDeleting] = useState(false);
   const navigate = useNavigate();
 
   // Create a memoized logout function that won't change on re-renders
@@ -31,7 +35,7 @@ const Dashboard = () => {
       // We're already on the correct page
       return;
     }
-
+    
     const loadDocuments = async () => {
       try {
         // Get token directly from localStorage with detailed logging
@@ -94,6 +98,31 @@ const Dashboard = () => {
     }
   }, [navigate]);
 
+  const handleDeleteClick = (e, docId) => {
+    e.preventDefault(); // Prevent navigation
+    e.stopPropagation(); // Stop event bubbling
+    setDocumentToDelete(docId);
+    setShowDeleteConfirm(true);
+  };
+
+  const handleDelete = async () => {
+    if (!documentToDelete || deleting) return;
+    
+    setDeleting(true);
+    try {
+      await deleteDocument(documentToDelete);
+      // Update documents list by filtering out the deleted one
+      setDocuments(documents.filter(doc => doc._id !== documentToDelete));
+      setShowDeleteConfirm(false);
+      setDocumentToDelete(null);
+    } catch (err) {
+      console.error('Error deleting document:', err);
+      setError('Failed to delete document. Please try again.');
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="loading-container" style={{ textAlign: 'center', padding: '50px' }}>
@@ -151,12 +180,45 @@ const Dashboard = () => {
                 <p>Uploaded: {new Date(doc.upload_date).toLocaleDateString()}</p>
                 <div className="document-actions">
                   <Link to={`/documents/${doc._id}`} className="view-link">View & Analyze</Link>
+                  <button 
+                    onClick={(e) => handleDeleteClick(e, doc._id)}
+                    className="delete-link"
+                  >
+                    Delete
+                  </button>
                 </div>
               </div>
             ))}
           </div>
         )}
       </div>
+      
+      {showDeleteConfirm && (
+        <div className="modal-overlay">
+          <div className="delete-confirmation">
+            <h3>Delete Document</h3>
+            <p>Are you sure you want to delete this document? This action cannot be undone.</p>
+            <div className="delete-confirmation-actions">
+              <button 
+                onClick={() => {
+                  setShowDeleteConfirm(false);
+                  setDocumentToDelete(null);
+                }} 
+                className="cancel-button"
+              >
+                Cancel
+              </button>
+              <button 
+                onClick={handleDelete} 
+                className="delete-confirm-button"
+                disabled={deleting}
+              >
+                {deleting ? 'Deleting...' : 'Delete'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

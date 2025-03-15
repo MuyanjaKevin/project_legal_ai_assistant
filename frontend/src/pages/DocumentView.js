@@ -1,7 +1,8 @@
 // src/pages/DocumentView.js
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import './DocumentView.css';
+import { deleteDocument } from '../services/api';
+import '../App.css';
 
 const DocumentView = () => {
   const { id } = useParams();
@@ -13,6 +14,8 @@ const DocumentView = () => {
   const [keyInfo, setKeyInfo] = useState(null);
   const [summarizing, setSummarizing] = useState(false);
   const [extracting, setExtracting] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     const fetchDocument = async () => {
@@ -110,62 +113,19 @@ const DocumentView = () => {
     }
   };
 
-  // Fixed renderKeyInfo function to handle objects properly
-  const renderKeyInfo = () => {
-    if (!keyInfo) return null;
+  const handleDelete = async () => {
+    if (deleting) return;
     
+    setDeleting(true);
     try {
-      // Try to parse if it's a string
-      let infoObject;
-      if (typeof keyInfo === 'string') {
-        // Check if it looks like JSON
-        if (keyInfo.trim().startsWith('{') || keyInfo.trim().startsWith('[')) {
-          infoObject = JSON.parse(keyInfo);
-        } else {
-          // Not JSON, display as text
-          return (
-            <div className="key-info-container">
-              <h3>Key Information</h3>
-              <div className="key-info-content">
-                <p>{keyInfo}</p>
-              </div>
-            </div>
-          );
-        }
-      } else {
-        // Already an object
-        infoObject = keyInfo;
-      }
-      
-      // Render object properties
-      return (
-        <div className="key-info-container">
-          <h3>Key Information</h3>
-          <div className="key-info-content">
-            {Object.entries(infoObject).map(([key, value]) => (
-              <div key={key} className="info-item">
-                <strong>{key}:</strong> {
-                  // Check if the value is an object or array
-                  typeof value === 'object' && value !== null
-                    ? JSON.stringify(value) // Convert nested objects to string
-                    : String(value) // Convert any value to string
-                }
-              </div>
-            ))}
-          </div>
-        </div>
-      );
-    } catch (e) {
-      console.error("Error rendering key info:", e);
-      // Fallback render as string
-      return (
-        <div className="key-info-container">
-          <h3>Key Information</h3>
-          <div className="key-info-content">
-            <p>{String(keyInfo)}</p>
-          </div>
-        </div>
-      );
+      await deleteDocument(id);
+      navigate('/');
+    } catch (err) {
+      console.error('Error deleting document:', err);
+      setError('Failed to delete document. Please try again.');
+      setShowDeleteConfirm(false);
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -201,6 +161,117 @@ const DocumentView = () => {
     );
   }
 
+  const renderKeyInfo = () => {
+    if (!keyInfo) return null;
+    
+    // Super aggressive text cleaning function
+    const cleanAndParseText = (text) => {
+      // Convert to string if not already
+      let str = String(text);
+      
+      // Try to identify JSON structure in the text
+      const jsonRegex = /{[^}]*"[^"]*"[^}]*}/;
+      const match = str.match(jsonRegex);
+      
+      if (match) {
+        try {
+          // Extract what looks like JSON
+          return JSON.parse(match[0]);
+        } catch (e) {
+          // If parsing fails, continue with cleaning
+        }
+      }
+      
+      // Remove quotes and other non-data characters
+      str = str.replace(/^["']+|["']+$/g, '')  // Remove surrounding quotes
+              .replace(/\\"/g, '"')          // Replace escaped quotes
+              .replace(/\\n/g, ' ')          // Replace newlines with spaces
+              .replace(/json\s*/, '')        // Remove "json" word
+              .replace(/[\\]{1,}/g, '')      // Remove backslashes
+              .trim();
+      
+      // Extract key-value pairs using regex
+      const keyValuePairs = {};
+      
+      // Extract Parties object
+      const partiesMatch = str.match(/"Parties"\s*:\s*{([^}]*)}/);
+      if (partiesMatch) {
+        const partiesObj = {};
+        const disclosingMatch = partiesMatch[1].match(/"Disclosing Party"\s*:\s*"([^"]*)"/);
+        const receivingMatch = partiesMatch[1].match(/"Receiving Party"\s*:\s*"([^"]*)"/);
+        
+        if (disclosingMatch) partiesObj["Disclosing Party"] = disclosingMatch[1];
+        if (receivingMatch) partiesObj["Receiving Party"] = receivingMatch[1];
+        
+        keyValuePairs["Parties"] = partiesObj;
+      }
+      
+      // Extract other fields
+      const effectiveDateMatch = str.match(/"Effective Date"\s*:\s*"([^"]*)"/);
+      if (effectiveDateMatch) keyValuePairs["Effective Date"] = effectiveDateMatch[1];
+      
+      const termMatch = str.match(/"Term\/Duration"\s*:\s*"([^"]*)"/);
+      if (termMatch) keyValuePairs["Term/Duration"] = termMatch[1];
+      
+      const lawMatch = str.match(/"Governing Law"\s*:\s*"([^"]*)"/);
+      if (lawMatch) keyValuePairs["Governing Law"] = lawMatch[1];
+      
+      return Object.keys(keyValuePairs).length > 0 ? keyValuePairs : { "Raw Text": str };
+    };
+    
+    // Process the key info
+    let processedInfo;
+    try {
+      // First try normal JSON parsing if it's a string
+      if (typeof keyInfo === 'string') {
+        try {
+          processedInfo = JSON.parse(keyInfo);
+        } catch (e) {
+          // If that fails, use our aggressive cleaner
+          console.log("Standard JSON parsing failed, using text extraction");
+          processedInfo = cleanAndParseText(keyInfo);
+        }
+      } else {
+        // Already an object
+        processedInfo = keyInfo;
+      }
+      
+      // Render the processed info
+      return (
+        <div className="key-info-container">
+          <h3>Key Information</h3>
+          <div className="key-info-content">
+            <dl className="info-list">
+              {Object.entries(processedInfo).map(([key, value]) => (
+                <div key={key} className="info-item">
+                  <dt className="info-term">{key.replace(/([A-Z])/g, ' $1').trim()}</dt>
+                  <dd className="info-definition">
+                    {typeof value === 'object' && value !== null 
+                      ? Object.entries(value).map(([subKey, subVal]) => (
+                          <span key={subKey}><strong>{subKey}:</strong> {subVal}<br /></span>
+                        ))
+                      : String(value)
+                    }
+                  </dd>
+                </div>
+              ))}
+            </dl>
+          </div>
+        </div>
+      );
+    } catch (e) {
+      console.error("Error rendering key info:", e);
+      return (
+        <div className="key-info-container">
+          <h3>Key Information</h3>
+          <div className="key-info-content">
+            <p>{String(keyInfo)}</p>
+          </div>
+        </div>
+      );
+    }
+  };
+
   return (
     <div className="document-view">
       <div className="document-header">
@@ -208,6 +279,7 @@ const DocumentView = () => {
         <div className="document-meta">
           <p>Uploaded: {new Date(document.upload_date).toLocaleString()}</p>
           <p>Type: {document.file_type}</p>
+          {document.category && <p>Category: {document.category}</p>}
         </div>
         <div className="document-actions">
           <button 
@@ -223,6 +295,12 @@ const DocumentView = () => {
             className="action-button"
           >
             {extracting ? 'Extracting Info...' : 'Extract Key Information'}
+          </button>
+          <button 
+            onClick={() => setShowDeleteConfirm(true)}
+            className="action-button delete-button"
+          >
+            Delete Document
           </button>
         </div>
       </div>
@@ -254,6 +332,30 @@ const DocumentView = () => {
           Back to Dashboard
         </button>
       </div>
+
+      {showDeleteConfirm && (
+        <div className="modal-overlay">
+          <div className="delete-confirmation">
+            <h3>Delete Document</h3>
+            <p>Are you sure you want to delete this document? This action cannot be undone.</p>
+            <div className="delete-confirmation-actions">
+              <button 
+                onClick={() => setShowDeleteConfirm(false)} 
+                className="cancel-button"
+              >
+                Cancel
+              </button>
+              <button 
+                onClick={handleDelete} 
+                className="delete-confirm-button"
+                disabled={deleting}
+              >
+                {deleting ? 'Deleting...' : 'Delete'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

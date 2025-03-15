@@ -1,16 +1,56 @@
 // src/pages/DocumentUpload.js
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { uploadDocument, suggestDocumentCategory } from '../services/api';
 
 const DocumentUpload = () => {
   const [file, setFile] = useState(null);
+  const [category, setCategory] = useState('Uncategorized');
+  const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [message, setMessage] = useState(null);
+  const [useAutoCategory, setUseAutoCategory] = useState(true); // New state for auto-categorization
+  const [suggestingCategory, setSuggestingCategory] = useState(false);
   const navigate = useNavigate();
+
+  // Fetch categories when component mounts
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        if (!token) {
+          navigate('/login');
+          return;
+        }
+
+        const response = await fetch('/api/documents/categories', {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to fetch categories');
+        }
+
+        const data = await response.json();
+        setCategories(data.categories || []);
+      } catch (err) {
+        console.error('Error fetching categories:', err);
+        // Don't set error state here, just use default categories
+      }
+    };
+
+    fetchCategories();
+  }, [navigate]);
 
   const handleFileChange = (e) => {
     setFile(e.target.files[0]);
+  };
+
+  const handleCategoryChange = (e) => {
+    setCategory(e.target.value);
   };
 
   const handleSubmit = async (e) => {
@@ -27,41 +67,39 @@ const DocumentUpload = () => {
     
     const formData = new FormData();
     formData.append('file', file);
+    formData.append('category', category);
     
     try {
+      // Get token from localStorage
       const token = localStorage.getItem('token');
       if (!token) {
         throw new Error('Authentication required. Please log in again.');
       }
       
-      console.log('Uploading file:', file.name);
-      console.log('Using token (first 15 chars):', token.substring(0, 15) + '...');
+      console.log('Uploading file:', file.name, 'Category:', category);
       
-      // Make direct request to backend
-      const response = await fetch('http://localhost:5000/api/documents/', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`
-          // Do NOT set Content-Type for FormData
-        },
-        body: formData
-      });
+      // Upload document
+      const response = await uploadDocument(formData);
       
-      console.log('Upload response status:', response.status);
-      
-      if (!response.ok) {
-        let errorMessage = 'Upload failed';
+      // If auto-categorization is enabled, suggest category
+      if (useAutoCategory && response.document_id) {
+        setSuggestingCategory(true);
         try {
-          const errorData = await response.json();
-          errorMessage = errorData.message || errorMessage;
-        } catch (e) {
-          // If response is not JSON, use status text
-          errorMessage = `${errorMessage}: ${response.statusText}`;
+          console.log('Auto-categorizing document...');
+          const categoryResponse = await suggestDocumentCategory(response.document_id);
+          console.log('Suggested category:', categoryResponse.category);
+          setMessage(`Document uploaded successfully! AI suggested category: ${categoryResponse.category}`);
+        } catch (categoryError) {
+          console.error('Error suggesting category:', categoryError);
+          // Don't fail the upload if category suggestion fails
+          setMessage('Document uploaded successfully! (Category suggestion failed)');
+        } finally {
+          setSuggestingCategory(false);
         }
-        throw new Error(errorMessage);
+      } else {
+        setMessage('Document uploaded successfully!');
       }
       
-      setMessage('Document uploaded successfully!');
       setTimeout(() => navigate('/'), 2000);
     } catch (err) {
       console.error('Upload error:', err);
@@ -70,6 +108,21 @@ const DocumentUpload = () => {
       setLoading(false);
     }
   };
+  
+  // Default categories if API call fails
+  const defaultCategories = [
+    "Uncategorized", 
+    "Contract", 
+    "NDA", 
+    "Agreement", 
+    "Employment", 
+    "Legal Brief",
+    "Terms of Service",
+    "Privacy Policy",
+    "License"
+  ];
+
+  const displayCategories = categories.length > 0 ? categories : defaultCategories;
 
   return (
     <div className="upload-container">
@@ -89,12 +142,64 @@ const DocumentUpload = () => {
           />
         </div>
         
+        <div className="form-group">
+          <label htmlFor="category">Document Category</label>
+          <select
+            id="category"
+            name="category"
+            value={category}
+            onChange={handleCategoryChange}
+            className="category-select"
+          >
+            {displayCategories.map((cat) => (
+              <option key={cat} value={cat}>
+                {cat}
+              </option>
+            ))}
+          </select>
+        </div>
+        
+        <div className="form-group">
+          <div className="auto-category-toggle">
+            <input
+              type="checkbox"
+              id="autoCategory"
+              checked={useAutoCategory}
+              onChange={() => setUseAutoCategory(!useAutoCategory)}
+            />
+            <label htmlFor="autoCategory">
+              Use AI to suggest document category after upload
+            </label>
+          </div>
+        </div>
+        
+        <div className="form-group">
+          <label htmlFor="newCategory">Or Add a New Category</label>
+          <div className="new-category-input">
+            <input
+              type="text"
+              id="newCategory"
+              placeholder="Enter new category name"
+              onChange={(e) => {
+                if (e.target.value) {
+                  setCategory(e.target.value);
+                }
+              }}
+            />
+          </div>
+        </div>
+        
         <button 
           type="submit" 
           className="upload-button" 
-          disabled={loading || !file}
+          disabled={loading || suggestingCategory || !file}
         >
-          {loading ? 'Uploading...' : 'Upload Document'}
+          {loading 
+            ? 'Uploading...' 
+            : suggestingCategory 
+              ? 'Suggesting Category...' 
+              : 'Upload Document'
+          }
         </button>
       </form>
       

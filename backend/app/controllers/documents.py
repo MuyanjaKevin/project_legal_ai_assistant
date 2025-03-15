@@ -264,3 +264,47 @@ def get_document(document_id):
         return jsonify({"document": document}), 200
     except Exception as e:
         return jsonify({"message": f"Error retrieving document: {str(e)}"}), 500
+    
+
+@documents_bp.route('/<document_id>/suggest-category', methods=['POST'])
+@jwt_required()
+def suggest_document_category(document_id):
+    try:
+        user_id = get_jwt_identity()
+        
+        # Verify document ownership
+        document = db.documents.find_one({"_id": ObjectId(document_id), "user_id": user_id})
+        if not document:
+            return jsonify({"message": "Document not found"}), 404
+        
+        # Only suggest category if document doesn't already have a non-default category
+        if document.get('category') not in ["Uncategorized", None, ""]:
+            return jsonify({
+                "message": "Document already has a category", 
+                "category": document['category']
+            }), 200
+        
+        # Suggest category
+        from app.services.ai_processor import suggest_document_category
+        suggested_category = suggest_document_category(ObjectId(document_id))
+        
+        if not suggested_category:
+            return jsonify({"message": "Failed to suggest category"}), 500
+        
+        # Update document with suggested category
+        db.documents.update_one(
+            {"_id": ObjectId(document_id)},
+            {"$set": {"category": suggested_category}}
+        )
+        
+        return jsonify({
+            "message": "Category suggested successfully", 
+            "category": suggested_category
+        }), 200
+    except Exception as e:
+        return jsonify({"message": f"Error suggesting category: {str(e)}"}), 500
+
+@documents_bp.route('/<document_id>/suggest-category', methods=['OPTIONS'])
+def options_document_suggest_category():
+    # Handle OPTIONS for suggest-category route
+    return {}, 200
