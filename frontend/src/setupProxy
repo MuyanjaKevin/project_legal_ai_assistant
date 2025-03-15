@@ -1,0 +1,18 @@
+// src/setupProxy.js
+const { createProxyMiddleware } = require('http-proxy-middleware');
+
+module.exports = function(app) {
+  app.use(
+    '/api',
+    createProxyMiddleware({
+      target: 'http://localhost:5000',
+      changeOrigin: true,
+      onProxyReq: function(proxyReq, req, res) {
+        // Copy authentication header from client to proxy request
+        if (req.headers.authorization) {
+          proxyReq.setHeader('Authorization', req.headers.authorization);
+        }
+      }
+    })
+  );
+};

@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Document Upload Test</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 20px; }
+    h1 { color: #333; }
+    .section { margin-bottom: 20px; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
+    button { padding: 8px 12px; background-color: #4285f4; color: white; border: none; border-radius: 4px; cursor: pointer; }
+    button:disabled { background-color: #cccccc; cursor: not-allowed; }
+    input[type="text"], input[type="password"] { padding: 8px; margin-right: 5px; }
+    #output { margin-top: 20px; padding: 10px; background-color: #f5f5f5; border-radius: 5px; max-height: 300px; overflow-y: auto; }
+    .log-entry { margin: 5px 0; }
+    .success { color: green; }
+    .error { color: red; }
+    .info { color: blue; }
+  </style>
+</head>
+<body>
+  <h1>Document Upload Test</h1>
+  
+  <div class="section">
+    <h2>Step 1: Login</h2>
+    <input type="text" id="email" placeholder="Email" value="test5@example.com">
+    <input type="password" id="password" placeholder="Password" value="password1234567">
+    <button onclick="login()">Login</button>
+  </div>
+  
+  <div class="section">
+    <h2>Step 2: Upload Document</h2>
+    <input type="file" id="fileInput" accept=".pdf,.docx,.txt">
+    <button onclick="uploadDocument()" id="uploadBtn" disabled>Upload Document</button>
+  </div>
+  
+  <div class="section">
+    <h2>Debug Options</h2>
+    <button onclick="testConnection()">Test API Connection</button>
+    <button onclick="checkToken()">Check Stored Token</button>
+    <button onclick="clearLogs()">Clear Logs</button>
+  </div>
+  
+  <div id="output">
+    <p>Output will appear here</p>
+  </div>
+
+  <script>
+    let currentToken = null;
+    
+    // Function to log messages to the output div
+    function log(message, type = 'normal') {
+      const outputDiv = document.getElementById('output');
+      const className = type === 'error' ? 'error' : (type === 'success' ? 'success' : (type === 'info' ? 'info' : ''));
+      outputDiv.innerHTML += `<p class="log-entry ${className}">${message}</p>`;
+      console.log(message);
+      
+      // Scroll to bottom
+      outputDiv.scrollTop = outputDiv.scrollHeight;
+    }
+    
+    // Clear logs
+    function clearLogs() {
+      document.getElementById('output').innerHTML = '<p>Logs cleared</p>';
+    }
+    
+    // Login function
+    async function login() {
+      const email = document.getElementById('email').value;
+      const password = document.getElementById('password').value;
+      
+      log(`Attempting login with email: ${email}`, 'info');
+      
+      try {
+        const response = await fetch('http://localhost:5000/api/auth/login', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ email, password })
+        });
+        
+        log(`Login response status: ${response.status}`, response.ok ? 'success' : 'error');
+        
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.message || 'Login failed');
+        }
+        
+        const data = await response.json();
+        
+        if (data.token) {
+          log(`Received token: ${data.token.substring(0, 15)}...`, 'success');
+          
+          // Store token in variable and localStorage
+          currentToken = data.token;
+          localStorage.setItem('token', data.token);
+          log(`Token stored in localStorage and variable`, 'success');
+          
+          // Enable upload button
+          document.getElementById('uploadBtn').disabled = false;
+        } else {
+          log('ERROR: No token in response', 'error');
+        }
+      } catch (error) {
+        log(`ERROR: ${error.message}`, 'error');
+      }
+    }
+    
+    // Check stored token
+    function checkToken() {
+      const token = localStorage.getItem('token');
+      if (token) {
+        log(`Token in localStorage: ${token.substring(0, 15)}...`, 'info');
+      } else {
+        log('No token found in localStorage', 'error');
+      }
+      
+      if (currentToken) {
+        log(`Token in variable: ${currentToken.substring(0, 15)}...`, 'info');
+      } else {
+        log('No token found in variable', 'error');
+      }
+    }
+    
+    // Test API connection
+    async function testConnection() {
+      try {
+        log('Testing API connection...', 'info');
+        const response = await fetch('http://localhost:5000/api/test');
+        log(`API test response status: ${response.status}`, response.ok ? 'success' : 'error');
+        
+        if (response.ok) {
+          const data = await response.json();
+          log(`API response: ${JSON.stringify(data)}`, 'success');
+        } else {
+          log('API connection test failed', 'error');
+        }
+      } catch (error) {
+        log(`API connection error: ${error.message}`, 'error');
+      }
+    }
+    
+    // Upload document function
+    async function uploadDocument() {
+      const fileInput = document.getElementById('fileInput');
+      if (!fileInput.files.length) {
+        log('Please select a file first', 'error');
+        return;
+      }
+      
+      const file = fileInput.files[0];
+      log(`Uploading file: ${file.name} (${file.type})`, 'info');
+      
+      // Get the token
+      const token = currentToken || localStorage.getItem('token');
+      if (!token) {
+        log('No token available. Please login first', 'error');
+        return;
+      }
+      
+      log(`Using token: ${token.substring(0, 15)}...`, 'info');
+      
+      // Create FormData
+      const formData = new FormData();
+      formData.append('file', file);
+      
+      try {
+        log('Attempting upload with direct fetch...', 'info');
+        
+        // Make the request with minimal headers
+        const response = await fetch('http://localhost:5000/api/documents', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`
+            // Intentionally NOT setting Content-Type for FormData
+          },
+          body: formData
+        });
+        
+        log(`Upload response status: ${response.status}`, response.ok ? 'success' : 'error');
+        
+        // Try to get response content
+        try {
+          const responseText = await response.text();
+          
+          // Try to parse as JSON if possible
+          try {
+            const jsonData = JSON.parse(responseText);
+            log(`Response: ${JSON.stringify(jsonData)}`, response.ok ? 'success' : 'error');
+          } catch (e) {
+            // Not JSON, show as text
+            log(`Response: ${responseText}`, response.ok ? 'success' : 'error');
+          }
+        } catch (e) {
+          log('Could not read response body', 'error');
+        }
+        
+        if (response.ok) {
+          log('Upload successful!', 'success');
+        } else {
+          log(`Upload failed with status: ${response.status}`, 'error');
+        }
+      } catch (error) {
+        log(`ERROR: ${error.message}`, 'error');
+      }
+    }
+    
+    // Check if token already exists on page load
+    document.addEventListener('DOMContentLoaded', function() {
+      const token = localStorage.getItem('token');
+      if (token) {
+        log(`Found existing token in localStorage: ${token.substring(0, 15)}...`, 'info');
+        currentToken = token;
+        document.getElementById('uploadBtn').disabled = false;
+      }
+    });
+  </script>
+</body>
+</html>
