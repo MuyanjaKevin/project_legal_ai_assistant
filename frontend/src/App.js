@@ -6,6 +6,8 @@ import Login from './pages/Login';
 import Register from './pages/Register';
 import DocumentView from './pages/DocumentView';
 import DocumentUpload from './pages/DocumentUpload';
+import LandingPage from './pages/LandingPage';
+import './styles/theme.css';
 import { getAuthToken } from './utils/auth';
 import './App.css';
 
@@ -39,18 +41,19 @@ function App() {
       <div className="App">
         <Routes>
           {/* Public routes */}
+          <Route path="/" element={<LandingPage />} />
           <Route 
             path="/login" 
-            element={isAuthenticated ? <Navigate to="/" /> : <Login />} 
+            element={isAuthenticated ? <Navigate to="/dashboard" /> : <Login />} 
           />
           <Route 
             path="/register" 
-            element={isAuthenticated ? <Navigate to="/" /> : <Register />} 
+            element={isAuthenticated ? <Navigate to="/dashboard" /> : <Register />} 
           />
           
           {/* Protected routes */}
           <Route 
-            path="/" 
+            path="/dashboard" 
             element={isAuthenticated ? <Dashboard /> : <Navigate to="/login" />} 
           />
           <Route 

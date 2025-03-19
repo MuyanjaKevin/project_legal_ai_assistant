@@ -1,0 +1,73 @@
+/* src/styles/Navigation.css */
+.main-nav {
+    background-color: var(--primary);
+    color: white;
+    padding: var(--space-md) 0;
+    box-shadow: var(--shadow-md);
+  }
+  
+  .nav-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  
+  .nav-logo a {
+    color: white;
+    font-size: 1.5rem;
+    font-weight: 700;
+    transition: opacity 0.2s;
+  }
+  
+  .nav-logo a:hover {
+    opacity: 0.9;
+    color: white;
+  }
+  
+  .nav-links {
+    display: flex;
+    gap: var(--space-lg);
+    align-items: center;
+  }
+  
+  .nav-links a {
+    color: rgba(255, 255, 255, 0.8);
+    font-weight: 500;
+    padding: var(--space-sm) 0;
+    border-bottom: 2px solid transparent;
+    transition: all 0.2s;
+  }
+  
+  .nav-links a:hover {
+    color: white;
+    border-bottom-color: var(--secondary);
+  }
+  
+  .nav-links a.active {
+    color: white;
+    border-bottom-color: var(--secondary);
+  }
+  
+  .logout-button {
+    background-color: transparent;
+    color: white;
+    border: 1px solid rgba(255, 255, 255, 0.4);
+    padding: 8px 16px;
+  }
+  
+  .logout-button:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+  }
+  
+  @media (max-width: 768px) {
+    .nav-content {
+      flex-direction: column;
+      gap: var(--space-md);
+    }
+    
+    .nav-links {
+      width: 100%;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+  }

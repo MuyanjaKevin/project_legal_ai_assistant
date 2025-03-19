@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { deleteDocument } from '../services/api';
 import '../App.css';
+import LoadingSpinner from '../Components/LoadingSpinner';
 
 const DocumentView = () => {
   const { id } = useParams();
@@ -353,6 +354,24 @@ const DocumentView = () => {
                 {deleting ? 'Deleting...' : 'Delete'}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {summarizing && (
+        <div className="loading-overlay">
+          <div className="loading-content">
+            <LoadingSpinner size="lg" />
+            <p>Generating summary with AI...</p>
+          </div>
+        </div>
+      )}
+
+      {extracting && (
+        <div className="loading-overlay">
+          <div className="loading-content">
+            <LoadingSpinner size="lg" />
+            <p>Extracting key information with AI...</p>
           </div>
         </div>
       )}

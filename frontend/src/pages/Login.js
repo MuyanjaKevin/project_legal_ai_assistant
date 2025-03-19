@@ -102,56 +102,71 @@ const Login = () => {
   };
 
   return (
-    <div className="auth-container">
-      <div className="auth-form">
-        <h1>Login to AI Legal Assistant</h1>
-        
-        {error && <div className="error-message">{error}</div>}
-        
-        <form onSubmit={handleSubmit}>
-          <div className="form-group">
-            <label htmlFor="email">Email</label>
-            <input
-              type="email"
-              id="email"
-              name="email"
-              value={formData.email}
-              onChange={handleChange}
-              required
-            />
-          </div>
+    <div className="auth-page">
+      <div className="auth-container">
+        <div className="auth-card">
+          <h1 className="auth-title">Login to AI Legal Assistant</h1>
           
-          <div className="form-group">
-            <label htmlFor="password">Password</label>
-            <input
-              type="password"
-              id="password"
-              name="password"
-              value={formData.password}
-              onChange={handleChange}
-              required
-            />
-          </div>
+          {error && <div className="error-message">{error}</div>}
           
-          <button type="submit" disabled={loading} className="auth-button">
-            {loading ? 'Logging in...' : 'Login'}
-          </button>
-        </form>
-        
-        <p className="auth-link">
-          Don't have an account? <Link to="/register">Register</Link>
-        </p>
-        
-        {debugLog.length > 0 && (
-          <div className="debug-log" style={{ backgroundColor: '#f5f5f5', padding: '10px', marginTop: '20px', borderRadius: '4px', fontSize: '12px' }}>
-            <strong>Debug Log:</strong>
-            <ul style={{ margin: '5px 0', paddingLeft: '20px' }}>
-              {debugLog.map((msg, index) => (
-                <li key={index}>{msg}</li>
-              ))}
-            </ul>
-          </div>
-        )}
+          <form onSubmit={handleSubmit} autoComplete="off">
+            <div className="form-group">
+              <label htmlFor="email">Email</label>
+              <input
+                type="email"
+                id="email"
+                name="email"
+                value={formData.email}
+                onChange={handleChange}
+                required
+                autoComplete="off"
+                className="input-field"
+              />
+            </div>
+            
+            <div className="form-group">
+              <label htmlFor="password">Password</label>
+              <input
+                type="password"
+                id="password"
+                name="password"
+                value={formData.password}
+                onChange={handleChange}
+                required
+                autoComplete="off"
+                className="input-field"
+              />
+            </div>
+            
+            <button type="submit" disabled={loading} className="auth-button">
+              {loading ? (
+                <>
+                  <span className="loading-spinner-small"></span>
+                  <span>Logging in...</span>
+                </>
+              ) : 'Login'}
+            </button>
+          </form>
+          
+          <p className="auth-link">
+            Don't have an account? <Link to="/register">Register</Link>
+          </p>
+          
+          <p className="auth-link">
+            <Link to="/">Back to Home</Link>
+          </p>
+          
+          {debugLog.length > 0 && (
+            <div className="debug-log" style={{ backgroundColor: '#f5f5f5', padding: '10px', marginTop: '20px', borderRadius: '4px', fontSize: '12px' }}>
+              <strong>Debug Log:</strong>
+              <ul style={{ margin: '5px 0', paddingLeft: '20px' }}>
+                {debugLog.map((msg, index) => (
+                  <li key={index}>{msg}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
