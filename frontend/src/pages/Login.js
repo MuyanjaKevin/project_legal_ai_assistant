@@ -12,13 +12,11 @@ const Login = () => {
   const [debugLog, setDebugLog] = useState([]);
   const navigate = useNavigate();
 
-  // Check if already logged in
+  // Clear any existing token when the login page loads
   useEffect(() => {
-    const token = localStorage.getItem('token');
-    if (token) {
-      console.log('Token found in localStorage, user already logged in');
-    }
-  }, [navigate]);
+    localStorage.removeItem('token');
+    addDebugMessage('Token cleared from localStorage on login page load');
+  }, []);
 
   const handleChange = (e) => {
     setFormData({

@@ -1,0 +1,59 @@
+.document-selector {
+  margin: 2rem 0;
+}
+
+.documents-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 1rem;
+  margin: 1rem 0;
+}
+
+.doc-item {
+  border: 1px solid #ddd;
+  padding: 1rem;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.doc-item.selected {
+  border-color: var(--primary-color);
+  background-color: rgba(26, 26, 46, 0.1);
+}
+
+.doc-title {
+  display: block;
+  font-weight: bold;
+  margin-bottom: 0.5rem;
+}
+
+.doc-type {
+  font-size: 0.9rem;
+  color: #666;
+}
+.loading-message,
+.error-message,
+.info-message {
+  padding: 1rem;
+  border-radius: 4px;
+  margin: 1rem 0;
+}
+
+.loading-message {
+  background-color: #e6f7ff;
+  color: #0077cc;
+  border-left: 4px solid #0077cc;
+}
+
+.error-message {
+  background-color: #ffe6e6;
+  color: #d32f2f;
+  border-left: 4px solid #d32f2f;
+}
+
+.info-message {
+  background-color: #e6f7ff;
+  color: #0077cc;
+  border-left: 4px solid #0077cc;
+}

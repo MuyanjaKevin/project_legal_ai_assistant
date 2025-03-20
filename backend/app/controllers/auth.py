@@ -1,12 +1,13 @@
 from flask import Blueprint, request, jsonify
 from werkzeug.security import generate_password_hash, check_password_hash
-from flask_jwt_extended import create_access_token
+from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity
 from datetime import timedelta
 from app.config.database import get_database
 from bson import ObjectId
 
 auth_bp = Blueprint('auth', __name__)
 db = get_database()
+
 
 @auth_bp.route('/register', methods=['POST'])
 def register():
@@ -86,3 +87,29 @@ def login():
         "token": access_token,
         "user": user_obj
     }), 200
+
+@auth_bp.route('/verify', methods=['GET'])
+@jwt_required()
+def verify_token():
+    """Simple endpoint to verify if the token is valid"""
+    current_user = get_jwt_identity()
+    
+    # Log verification attempt
+    print(f"Token verification for user: {current_user}")
+    
+    # Check if the user still exists in the database (optional)
+    user = db.users.find_one({"_id": ObjectId(current_user)})
+    if not user:
+        return jsonify({"valid": False, "error": "User not found"}), 401
+    
+    # Token is valid and user exists
+    return jsonify({
+        "valid": True, 
+        "user_id": current_user
+    }), 200
+
+# Add OPTIONS route to handle CORS preflight requests
+@auth_bp.route('/verify', methods=['OPTIONS'])
+def options_verify():
+    # Just handle OPTIONS preflight request
+    return {}, 200

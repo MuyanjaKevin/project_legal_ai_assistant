@@ -7,19 +7,21 @@ import Register from './pages/Register';
 import DocumentView from './pages/DocumentView';
 import DocumentUpload from './pages/DocumentUpload';
 import LandingPage from './pages/LandingPage';
+import DocumentComparison from './pages/DocumentComparison';
+import Navigation from './Components/Navigation';
+import ProtectedRoute from './Components/ProtectedRoute';
 import './styles/theme.css';
-import { getAuthToken } from './utils/auth';
 import './App.css';
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [checkingAuth, setCheckingAuth] = useState(true);
-
+  const [isAuthLoaded, setIsAuthLoaded] = useState(false);
+  
   useEffect(() => {
-    // Check authentication on mount
-    const token = getAuthToken();
+    // Check for token on mount, but don't redirect
+    const token = localStorage.getItem('token');
     setIsAuthenticated(!!token);
-    setCheckingAuth(false);
+    setIsAuthLoaded(true);
     
     console.log('App mounted, auth state:', !!token);
     
@@ -31,14 +33,32 @@ function App() {
     }
   }, []);
 
-  // Wait until we've checked authentication
-  if (checkingAuth) {
-    return <div className="loading">Initializing application...</div>;
+  // Update auth state when localStorage changes
+  useEffect(() => {
+    const handleStorageChange = () => {
+      const token = localStorage.getItem('token');
+      setIsAuthenticated(!!token);
+    };
+    
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, []);
+
+  const handleLogout = () => {
+    localStorage.removeItem('token');
+    setIsAuthenticated(false);
+    console.log('User logged out');
+  };
+
+  // Wait until auth is checked
+  if (!isAuthLoaded) {
+    return <div className="loading">Loading application...</div>;
   }
 
   return (
     <Router>
       <div className="App">
+        <Navigation isAuthenticated={isAuthenticated} onLogout={handleLogout} />
         <Routes>
           {/* Public routes */}
           <Route path="/" element={<LandingPage />} />
@@ -51,18 +71,38 @@ function App() {
             element={isAuthenticated ? <Navigate to="/dashboard" /> : <Register />} 
           />
           
-          {/* Protected routes */}
+          {/* Protected routes - individual route protection approach */}
           <Route 
             path="/dashboard" 
-            element={isAuthenticated ? <Dashboard /> : <Navigate to="/login" />} 
+            element={
+              <ProtectedRoute>
+                <Dashboard />
+              </ProtectedRoute>
+            } 
           />
           <Route 
             path="/documents/:id" 
-            element={isAuthenticated ? <DocumentView /> : <Navigate to="/login" />} 
+            element={
+              <ProtectedRoute>
+                <DocumentView />
+              </ProtectedRoute>
+            } 
           />
           <Route 
             path="/upload" 
-            element={isAuthenticated ? <DocumentUpload /> : <Navigate to="/login" />} 
+            element={
+              <ProtectedRoute>
+                <DocumentUpload />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/compare" 
+            element={
+              <ProtectedRoute>
+                <DocumentComparison />
+              </ProtectedRoute>
+            } 
           />
           
           {/* Fallback route */}

@@ -12,8 +12,11 @@ try:
 except ImportError:
     from app.services.ai_processor import summarize_document, extract_key_info
 
+from ..services.comparison_service import DocumentComparisonService
+
 documents_bp = Blueprint('documents', __name__)
 db = get_database()
+comparison_service = DocumentComparisonService()
 
 # Ensure uploads directory exists
 UPLOAD_FOLDER = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'uploads')
@@ -245,6 +248,14 @@ def options_document_extract_info():
     # Handle OPTIONS for extract-info route
     return {}, 200
 
+@documents_bp.route('/compare', methods=['OPTIONS'])
+def options_document_compare():
+    # Handle OPTIONS for compare route
+    response = jsonify({})
+    response.headers.add('Access-Control-Allow-Methods', 'POST, OPTIONS')
+    response.headers.add('Access-Control-Allow-Headers', 'Content-Type, Authorization')
+    return response, 200
+
 @documents_bp.route('/<document_id>', methods=['GET'])
 @jwt_required()
 def get_document(document_id):
@@ -308,3 +319,67 @@ def suggest_document_category(document_id):
 def options_document_suggest_category():
     # Handle OPTIONS for suggest-category route
     return {}, 200
+
+@documents_bp.route('/compare', methods=['POST'])
+@jwt_required()
+def compare_documents():
+    try:
+        data = request.get_json()
+        doc_ids = data.get('documentIds', [])
+        
+        if len(doc_ids) < 2:
+            return jsonify({
+                'error': 'At least two documents required for comparison'
+            }), 400
+            
+        # Debug log
+        print(f"Comparing document IDs: {doc_ids}")
+            
+        # Fetch documents from MongoDB and handle content field
+        documents = []
+        for doc_id in doc_ids:
+            doc = db.documents.find_one({"_id": ObjectId(doc_id)})
+            
+            # Debug log
+            print(f"Document {doc_id} found: {doc is not None}")
+            if doc:
+                print(f"Document {doc_id} has extracted_text: {'extracted_text' in doc}")
+            
+            if not doc:
+                return jsonify({
+                    'error': f'Document with ID {doc_id} not found'
+                }), 404
+            if 'extracted_text' not in doc:  # Change from text_content to extracted_text
+                return jsonify({
+                    'error': f'Document {doc_id} has no content or has not been processed yet'
+                }), 400
+            documents.append(doc)
+        
+        # Compare documents using extracted_text field
+        comparison_result = comparison_service.compare_documents(
+            documents[0].get('extracted_text', ''),  # Change to extracted_text
+            documents[1].get('extracted_text', '')   # Change to extracted_text
+        )
+        
+        # Update comparison metadata
+        for doc_id in doc_ids:
+            db.documents.update_one(
+                {"_id": ObjectId(doc_id)},
+                {
+                    "$set": {
+                        "last_compared": datetime.utcnow(),
+                        "comparison_count": 1
+                    }
+                }
+            )
+        
+        return jsonify({
+            'success': True,
+            'comparison': comparison_result
+        })
+        
+    except Exception as e:
+        print(f"Comparison error: {str(e)}")  # Debug logging
+        return jsonify({
+            'error': str(e)
+        }), 500

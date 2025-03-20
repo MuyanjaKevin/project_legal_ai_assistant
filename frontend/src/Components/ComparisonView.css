@@ -1,0 +1,23 @@
+.comparison-view {
+  margin-top: 2rem;
+}
+
+.diff-container {
+  background: #f5f5f5;
+  padding: 1rem;
+  border-radius: 4px;
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.diff-line {
+  white-space: pre-wrap;
+}
+
+.diff-line-added {
+  background-color: #e6ffe6;
+}
+
+.diff-line-removed {
+  background-color: #ffe6e6;
+}
