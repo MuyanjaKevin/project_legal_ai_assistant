@@ -20,6 +20,7 @@ const Navigation = ({ isAuthenticated, onLogout }) => {
                 <Link to="/dashboard">Dashboard</Link>
                 <Link to="/upload">Upload Document</Link>
                 <Link to="/compare">Compare Documents</Link>
+                <Link to="/contracts">Generate Contracts</Link>
                 <button className="nav-button" onClick={onLogout}>Logout</button>
               </>
             ) : (

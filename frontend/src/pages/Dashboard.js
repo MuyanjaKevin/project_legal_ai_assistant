@@ -157,8 +157,9 @@ const Dashboard = () => {
     <div className="dashboard">
       <header>
         <h1>Document Dashboard</h1>
-        <div>
-          <Link to="/upload" className="upload-button" style={{ marginRight: '10px' }}>Upload Document</Link>
+        <div className="dashboard-actions">
+          <Link to="/upload" className="upload-button">Upload Document</Link>
+          <Link to="/compare" className="compare-button">Compare Documents</Link>
           <button onClick={handleLogout} className="logout-button">Logout</button>
         </div>
       </header>

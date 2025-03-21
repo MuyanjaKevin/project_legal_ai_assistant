@@ -54,14 +54,18 @@ def create_app():
     # Register blueprints
     from app.controllers.auth import auth_bp
     from app.controllers.documents import documents_bp
+    from app.controllers.contracts import contracts_bp
     
     app.register_blueprint(auth_bp, url_prefix='/api/auth')
     app.register_blueprint(documents_bp, url_prefix='/api/documents')
+    app.register_blueprint(contracts_bp, url_prefix='/api/contracts')
     
     # Add a simple test route
     @app.route('/api/test', methods=['GET'])
     def test_route():
         return jsonify({"message": "API is working"}), 200
+    
+    
     
     return app
 

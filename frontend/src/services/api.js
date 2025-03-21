@@ -1,45 +1,48 @@
-// src/services/api.js
+import axios from 'axios';
 
-// Create a fetch wrapper that always includes the token
-const fetchWithAuth = async (url, options = {}) => {
-  // Get the token directly from localStorage
-  const token = localStorage.getItem('token');
-  
-  // Prepare headers with Authorization
-  const headers = {
-    ...(options.headers || {})
-  };
-  
-  if (token) {
-    headers['Authorization'] = `Bearer ${token}`;
-    console.log(`Using token: ${token.substring(0, 10)}...`);
-  } else {
-    console.warn('No token available for request!');
+// Create axios instance
+const api = axios.create({
+  baseURL: 'http://localhost:5000/api',
+  headers: {
+    'Content-Type': 'application/json'
   }
-  
-  // Return fetch with auth headers
-  return fetch(url, {
-    ...options,
-    headers
-  });
-};
+});
+
+// Add request interceptor
+api.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem('token');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+      console.log(`Using token: ${token.substring(0, 10)}...`);
+    } else {
+      console.warn('No token available for request!');
+    }
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
+  }
+);
+
+// Add response interceptor
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401) {
+      localStorage.removeItem('token');
+      window.location.href = '/login';
+    }
+    return Promise.reject(error);
+  }
+);
 
 // Document services
 export const getDocuments = async () => {
   try {
     console.log('Fetching documents with auth...');
-    const response = await fetchWithAuth('/api/documents/');
-    console.log('Documents response status:', response.status);
-    
-    if (!response.ok) {
-      if (response.status === 401) {
-        throw new Error('Authentication failed. Please log in again.');
-      }
-      throw new Error(`Error ${response.status}: ${response.statusText}`);
-    }
-    
-    const data = await response.json();
-    return data.documents || [];
+    const response = await api.get('/documents');
+    return response.data.documents || [];
   } catch (error) {
     console.error('Error fetching documents:', error);
     throw error;
@@ -48,17 +51,8 @@ export const getDocuments = async () => {
 
 export const getDocument = async (id) => {
   try {
-    const response = await fetchWithAuth(`/api/documents/${id}`);
-    
-    if (!response.ok) {
-      if (response.status === 401) {
-        throw new Error('Authentication failed. Please log in again.');
-      }
-      throw new Error(`Error ${response.status}: ${response.statusText}`);
-    }
-    
-    const data = await response.json();
-    return data.document;
+    const response = await api.get(`/documents/${id}`);
+    return response.data.document;
   } catch (error) {
     console.error(`Error fetching document ${id}:`, error);
     throw error;
@@ -67,41 +61,22 @@ export const getDocument = async (id) => {
 
 export const uploadDocument = async (formData) => {
   try {
-    const response = await fetchWithAuth('/api/documents/', {
-      method: 'POST',
-      body: formData
-    });
-    
-    if (!response.ok) {
-      if (response.status === 401) {
-        throw new Error('Authentication failed. Please log in again.');
+    const response = await api.post('/documents', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data'
       }
-      const errorData = await response.json();
-      throw new Error(errorData.message || `Upload failed: ${response.status}`);
-    }
-    
-    return await response.json();
+    });
+    return response.data;
   } catch (error) {
     console.error('Error uploading document:', error);
     throw error;
   }
 };
 
-// Add delete document function
 export const deleteDocument = async (docId) => {
   try {
-    const response = await fetchWithAuth(`/api/documents/${docId}`, {
-      method: 'DELETE'
-    });
-    
-    if (!response.ok) {
-      if (response.status === 401) {
-        throw new Error('Authentication failed. Please log in again.');
-      }
-      throw new Error(`Error ${response.status}: ${response.statusText}`);
-    }
-    
-    return await response.json();
+    const response = await api.delete(`/documents/${docId}`);
+    return response.data;
   } catch (error) {
     console.error('Error deleting document:', error);
     throw error;
@@ -110,40 +85,43 @@ export const deleteDocument = async (docId) => {
 
 export const suggestDocumentCategory = async (docId) => {
   try {
-    const response = await fetchWithAuth(`/api/documents/${docId}/suggest-category`, {
-      method: 'POST'
-    });
-    
-    if (!response.ok) {
-      if (response.status === 401) {
-        throw new Error('Authentication failed. Please log in again.');
-      }
-      throw new Error(`Error ${response.status}: ${response.statusText}`);
-    }
-    
-    return await response.json();
+    const response = await api.post(`/documents/${docId}/suggest-category`);
+    return response.data;
   } catch (error) {
     console.error('Error suggesting category:', error);
     throw error;
   }
 };
 
+export const compareDocuments = async (documentIds) => {
+  try {
+    const response = await api.post('/documents/compare', { documentIds });
+    return response.data;
+  } catch (error) {
+    console.error('Error comparing documents:', error);
+    throw error;
+  }
+};
+
+export const generateContract = async (templateId, formData, outputFormat) => {
+  try {
+    const response = await api.post('/contracts/generate', {
+      templateId,
+      formData,
+      outputFormat
+    });
+    return response.data;
+  } catch (error) {
+    throw new Error(error.response?.data?.message || 'Error generating contract');
+  }
+};
+
 export const login = async (credentials) => {
   try {
-    const response = await fetch('/api/auth/login', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(credentials)
-    });
-    
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.message || 'Login failed');
-    }
-    
-    return await response.json();
+    const response = await api.post('/auth/login', credentials);
+    const { token } = response.data;
+    localStorage.setItem('token', token);
+    return response.data;
   } catch (error) {
     console.error('Login error:', error);
     throw error;
@@ -152,22 +130,20 @@ export const login = async (credentials) => {
 
 export const register = async (userData) => {
   try {
-    const response = await fetch('/api/auth/register', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(userData)
-    });
-    
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.message || 'Registration failed');
-    }
-    
-    return await response.json();
+    const response = await api.post('/auth/register', userData);
+    return response.data;
   } catch (error) {
     console.error('Registration error:', error);
+    throw error;
+  }
+};
+
+export const verifyToken = async () => {
+  try {
+    const response = await api.get('/auth/verify');
+    return response.data;
+  } catch (error) {
+    console.error('Token verification error:', error);
     throw error;
   }
 };
@@ -179,6 +155,9 @@ export default {
   getDocument,
   uploadDocument,
   deleteDocument,
-  suggestDocumentCategory
+  suggestDocumentCategory,
+  compareDocuments,
+  generateContract,
+  verifyToken
 };
 

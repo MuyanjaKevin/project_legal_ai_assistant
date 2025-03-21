@@ -1,15 +1,23 @@
 from pymongo import MongoClient
-import os
+from app.config.config import MONGODB_URI
+
+_db = None
 
 def get_database():
-    # Get MongoDB URI from environment variable or use default
-    mongodb_uri = os.environ.get('MONGODB_URI', 'mongodb://localhost:27017/legalassistant')
+    global _db
+    if _db is None:
+        try:
+            client = MongoClient(MONGODB_URI)
+            _db = client.legalassistant
+            
+            # Ensure required collections exist
+            collections = ['users', 'documents', 'contracts']
+            for collection in collections:
+                if collection not in _db.list_collection_names():
+                    _db.create_collection(collection)
+                    
+        except Exception as e:
+            print(f"Error connecting to database: {str(e)}")
+            raise e
     
-    # Create a connection
-    client = MongoClient(mongodb_uri)
-    
-    # Get database name from URI
-    db_name = mongodb_uri.split('/')[-1]
-    
-    # Return database instance
-    return client[db_name]
+    return _db

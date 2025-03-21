@@ -8,6 +8,7 @@ import DocumentView from './pages/DocumentView';
 import DocumentUpload from './pages/DocumentUpload';
 import LandingPage from './pages/LandingPage';
 import DocumentComparison from './pages/DocumentComparison';
+import ContractGenerator from './pages/ContractGenerator';
 import Navigation from './Components/Navigation';
 import ProtectedRoute from './Components/ProtectedRoute';
 import './styles/theme.css';
@@ -15,33 +16,40 @@ import './App.css';
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [isAuthLoaded, setIsAuthLoaded] = useState(false);
+  const [loading, setLoading] = useState(true);
   
   useEffect(() => {
-    // Check for token on mount, but don't redirect
-    const token = localStorage.getItem('token');
-    setIsAuthenticated(!!token);
-    setIsAuthLoaded(true);
-    
-    console.log('App mounted, auth state:', !!token);
-    
-    // This helps debug issues with token storage
-    if (token) {
-      console.log(`Token found (first 10 chars): ${token.substring(0, 10)}...`);
-    } else {
-      console.log('No token found');
-    }
-  }, []);
+    const verifyAuth = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        if (!token) {
+          setIsAuthenticated(false);
+          setLoading(false);
+          return;
+        }
 
-  // Update auth state when localStorage changes
-  useEffect(() => {
-    const handleStorageChange = () => {
-      const token = localStorage.getItem('token');
-      setIsAuthenticated(!!token);
+        const response = await fetch('/api/auth/verify', {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+
+        if (response.ok) {
+          setIsAuthenticated(true);
+        } else {
+          localStorage.removeItem('token');
+          setIsAuthenticated(false);
+        }
+      } catch (error) {
+        console.error('Auth verification failed:', error);
+        setIsAuthenticated(false);
+      } finally {
+        setLoading(false);
+      }
     };
-    
-    window.addEventListener('storage', handleStorageChange);
-    return () => window.removeEventListener('storage', handleStorageChange);
+
+    verifyAuth();
   }, []);
 
   const handleLogout = () => {
@@ -50,9 +58,8 @@ function App() {
     console.log('User logged out');
   };
 
-  // Wait until auth is checked
-  if (!isAuthLoaded) {
-    return <div className="loading">Loading application...</div>;
+  if (loading) {
+    return <div>Loading...</div>;
   }
 
   return (
@@ -61,14 +68,14 @@ function App() {
         <Navigation isAuthenticated={isAuthenticated} onLogout={handleLogout} />
         <Routes>
           {/* Public routes */}
-          <Route path="/" element={<LandingPage />} />
+          <Route path="/" element={isAuthenticated ? <Dashboard /> : <LandingPage />} />
           <Route 
             path="/login" 
-            element={isAuthenticated ? <Navigate to="/dashboard" /> : <Login />} 
+            element={!isAuthenticated ? <Login setIsAuthenticated={setIsAuthenticated} /> : <Navigate to="/" />} 
           />
           <Route 
             path="/register" 
-            element={isAuthenticated ? <Navigate to="/dashboard" /> : <Register />} 
+            element={isAuthenticated ? <Navigate to="/" /> : <Register />} 
           />
           
           {/* Protected routes - individual route protection approach */}
@@ -91,16 +98,20 @@ function App() {
           <Route 
             path="/upload" 
             element={
-              <ProtectedRoute>
-                <DocumentUpload />
-              </ProtectedRoute>
+              isAuthenticated ? <DocumentUpload /> : <Navigate to="/login" />
             } 
           />
           <Route 
             path="/compare" 
             element={
+              isAuthenticated ? <DocumentComparison /> : <Navigate to="/login" />
+            } 
+          />
+          <Route 
+            path="/contracts" 
+            element={
               <ProtectedRoute>
-                <DocumentComparison />
+                <ContractGenerator />
               </ProtectedRoute>
             } 
           />

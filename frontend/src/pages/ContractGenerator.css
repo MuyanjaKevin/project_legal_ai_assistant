@@ -1,0 +1,185 @@
+/* src/pages/ContractGenerator.css */
+.contract-generator {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 2rem;
+  }
+  
+  .contract-generator h1 {
+    color: var(--primary-color);
+    margin-bottom: 2rem;
+  }
+  
+  .error-message, .success-message {
+    padding: 1rem;
+    border-radius: 4px;
+    margin-bottom: 1.5rem;
+  }
+  
+  .error-message {
+    background-color: #fff1f0;
+    border: 1px solid #f5222d;
+    color: #cf1322;
+  }
+  
+  .success-message {
+    background-color: #f6ffed;
+    border: 1px solid #52c41a;
+    color: #389e0d;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  
+  .download-button {
+    margin-top: 1rem;
+    background-color: var(--primary-color);
+    color: white;
+    border: none;
+    border-radius: 4px;
+    padding: 0.5rem 1rem;
+    cursor: pointer;
+    font-weight: 600;
+  }
+  
+  .template-selector h2 {
+    margin-bottom: 1.5rem;
+  }
+  
+  .template-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 2rem;
+  }
+  
+  .template-card {
+    background-color: #f8f9fa;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    padding: 1.5rem;
+    transition: transform 0.2s, box-shadow 0.2s;
+    cursor: pointer;
+  }
+  
+  .template-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  }
+  
+  .template-card h3 {
+    margin-top: 0;
+    margin-bottom: 1rem;
+    color: var(--primary-color);
+  }
+  
+  .template-card p {
+    color: #4a5568;
+    margin-bottom: 1.5rem;
+  }
+  
+  .select-button {
+    background-color: var(--primary-color);
+    color: white;
+    border: none;
+    border-radius: 4px;
+    padding: 0.5rem 1rem;
+    cursor: pointer;
+    font-weight: 600;
+    transition: background-color 0.2s;
+  }
+  
+  .select-button:hover {
+    background-color: var(--primary-color-dark);
+  }
+  
+  .contract-form {
+    max-width: 800px;
+    margin: 0 auto;
+  }
+  
+  .back-button {
+    background: none;
+    border: none;
+    color: var(--primary-color);
+    padding: 0.5rem 0;
+    margin-bottom: 2rem;
+    cursor: pointer;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+  }
+  
+  .form-group {
+    margin-bottom: 1.5rem;
+  }
+  
+  .form-group label {
+    display: block;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+  }
+  
+  .form-group input,
+  .form-group textarea {
+    width: 100%;
+    padding: 0.75rem;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 1rem;
+  }
+  
+  .form-group textarea {
+    min-height: 100px;
+  }
+  
+  .required {
+    color: #f5222d;
+  }
+  
+  .format-options {
+    display: flex;
+    gap: 2rem;
+  }
+  
+  .format-options label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-weight: normal;
+    cursor: pointer;
+  }
+  
+  .form-actions {
+    margin-top: 2rem;
+    display: flex;
+    justify-content: center; /* Changed from flex-end to center */
+    width: 100%; /* Ensure full width */
+  }
+  
+  .generate-button {
+    background-color: var(--primary-color);
+    color: white;
+    border: none;
+    border-radius: 4px;
+    padding: 0.75rem 1.5rem;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    min-width: 200px; /* Ensure button has a minimum width */
+  }
+  
+  .generate-button:hover {
+    background-color: var(--primary-color-dark);
+  }
+  
+  .generate-button:disabled {
+    background-color: #ccc;
+    cursor: not-allowed;
+  }
+  
+  .loading {
+    text-align: center;
+    padding: 2rem;
+    color: #666;
+  }

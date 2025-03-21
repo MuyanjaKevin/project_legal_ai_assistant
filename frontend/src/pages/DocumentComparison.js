@@ -1,4 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import api from '../services/api'; // Update this import
 import DocumentSelector from '../Components/DocumentSelector';
 import ComparisonView from '../Components/ComparisonView';
 import './DocumentComparison.css';
@@ -8,50 +10,34 @@ function DocumentComparison() {
   const [comparisonResult, setComparisonResult] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const navigate = useNavigate();
 
   const handleDocumentSelect = (docIds) => {
     setSelectedDocs(docIds);
     setError(null);
-    // Clear previous comparison when selection changes
     if (comparisonResult) {
       setComparisonResult(null);
     }
   };
 
   const handleCompare = async () => {
+    if (selectedDocs.length < 2) {
+      setError('Please select at least 2 documents to compare');
+      return;
+    }
+
     try {
       setLoading(true);
       setError(null);
-      const token = localStorage.getItem('token');
       
-      if (!token) {
-        throw new Error('Authentication required');
-      }
-
-      console.log('Comparing documents:', selectedDocs);
-      
-      const response = await fetch('/api/documents/compare', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({ documentIds: selectedDocs })
+      const response = await api.post('/documents/compare', {
+        documentIds: selectedDocs
       });
-      
-      const responseData = await response.json();
-      console.log('Server response:', responseData);
-      
-      if (!response.ok) {
-        const errorMessage = responseData.error || `Server returned ${response.status}`;
-        console.error('Comparison failed:', errorMessage);
-        throw new Error(errorMessage);
-      }
 
-      setComparisonResult(responseData.comparison);
-    } catch (error) {
-      setError(error.message);
-      console.error('Comparison failed:', error);
+      setComparisonResult(response.data);
+    } catch (err) {
+      console.error('Comparison error:', err);
+      setError(err.response?.data?.message || 'Failed to compare documents');
     } finally {
       setLoading(false);
     }
@@ -83,9 +69,7 @@ function DocumentComparison() {
       
       {loading && <div className="loading">Processing comparison...</div>}
       
-      {comparisonResult && (
-        <ComparisonView result={comparisonResult} />
-      )}
+      {comparisonResult && <ComparisonView result={comparisonResult} />}
     </div>
   );
 }

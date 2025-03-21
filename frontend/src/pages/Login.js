@@ -1,8 +1,9 @@
 // src/pages/Login.js
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import api from '../services/api'; // Add this import
 
-const Login = () => {
+const Login = ({ setIsAuthenticated }) => {
   const [formData, setFormData] = useState({
     email: '',
     password: ''
@@ -30,72 +31,20 @@ const Login = () => {
     setDebugLog(prev => [...prev, message]);
   };
 
-  const handleSubmit = async (e) => {
+  const handleLogin = async (e) => {
     e.preventDefault();
-    setLoading(true);
-    setError(null);
-    
     try {
-      console.log(`Logging in with email: ${formData.email}`);
-      
-      const response = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(formData)
+      const response = await api.login({
+        email: formData.email,
+        password: formData.password
       });
-      
-      const data = await response.json();
-      
-      if (!response.ok) {
-        throw new Error(data.message || 'Login failed');
-      }
-      
-      if (!data.token) {
-        throw new Error('No token received from server');
-      }
-      
-      // IMPORTANT: Make sure token is stored in memory and localStorage
-      console.log(`Login successful, token: ${data.token.substring(0, 10)}...`);
-      
-      // Log localStorage before storage
-      console.log("localStorage before:", localStorage.getItem('token'));
-      
-      // Store token in localStorage
-      localStorage.setItem('token', data.token);
-      
-      // Verify token was stored
-      console.log("localStorage after:", localStorage.getItem('token'));
-      
-      // Store user data if available
-      if (data.user) {
-        localStorage.setItem('user', JSON.stringify(data.user));
-      }
-      
-      // Make test request to verify token works
-      console.log("Making test request with token");
-      const testResponse = await fetch('/api/documents', {
-        headers: {
-          'Authorization': `Bearer ${data.token}`
-        }
-      });
-      console.log("Test response status:", testResponse.status);
-      
-      if (testResponse.status === 200) {
-        console.log("Test request successful, token is working!");
-      } else {
-        console.warn("Test request failed with status:", testResponse.status);
-      }
-      
-      // Force a full page reload to ensure clean state
-      window.location.href = '/';
-      
-    } catch (err) {
-      console.error('Login error:', err);
-      setError(err.message || 'Login failed. Please check your credentials.');
-    } finally {
-      setLoading(false);
+
+      const { token } = response;
+      localStorage.setItem('token', token);
+      setIsAuthenticated(true);
+      navigate('/');
+    } catch (error) {
+      setError(error.response?.data?.message || 'Login failed');
     }
   };
 
@@ -107,7 +56,7 @@ const Login = () => {
           
           {error && <div className="error-message">{error}</div>}
           
-          <form onSubmit={handleSubmit} autoComplete="off">
+          <form onSubmit={handleLogin} autoComplete="off">
             <div className="form-group">
               <label htmlFor="email">Email</label>
               <input

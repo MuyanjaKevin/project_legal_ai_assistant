@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 import './DocumentSelector.css';
 
 function DocumentSelector({ onSelect }) {
@@ -7,7 +6,6 @@ function DocumentSelector({ onSelect }) {
   const [selected, setSelected] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const navigate = useNavigate();
 
   useEffect(() => {
     fetchDocuments();
@@ -18,50 +16,33 @@ function DocumentSelector({ onSelect }) {
       setLoading(true);
       setError(null);
       
-      // Get token from localStorage
       const token = localStorage.getItem('token');
-      
       if (!token) {
-        // No need to redirect here since parent component will handle it
-        throw new Error('Authentication token not found');
+        throw new Error('No authentication token found');
       }
-      
-      console.log('Using token (first 10 chars):', token.substring(0, 10));
-      
+
       const response = await fetch('/api/documents', {
-        method: 'GET',
         headers: {
-          'Authorization': `Bearer ${token}`,
+          'Authorization': `Bearer ${token.trim()}`,
           'Content-Type': 'application/json'
-        }
+        },
+        credentials: 'include' // Add this to include cookies
       });
-      
-      console.log('Response status:', response.status);
-      
+
       if (response.status === 401) {
-        // Token is invalid, let parent component handle redirection
-        throw new Error('Session expired. Please login again.');
+        localStorage.removeItem('token'); // Clear invalid token
+        window.location.href = '/login'; // Redirect to login
+        return;
       }
-      
+
       if (!response.ok) {
-        throw new Error(`Server error: ${response.status}`);
+        throw new Error(`Failed to fetch documents: ${response.status}`);
       }
-      
+
       const data = await response.json();
-      console.log('Documents API response:', data);
-      
-      // Handle different response formats
-      if (data.documents) {
-        setDocuments(data.documents);
-      } else if (Array.isArray(data)) {
-        setDocuments(data);
-      } else {
-        console.error('Unexpected data structure:', data);
-        throw new Error('Unexpected response format from server');
-      }
+      setDocuments(data.documents || []);
     } catch (error) {
-      console.error('Error fetching documents:', error);
-      setError(`Failed to load documents: ${error.message}`);
+      setError(error.message);
     } finally {
       setLoading(false);
     }
@@ -76,7 +57,7 @@ function DocumentSelector({ onSelect }) {
   };
 
   if (loading) return <div className="loading-message">Loading documents...</div>;
-  if (error) return <div className="error-message">{error}</div>;
+  if (error) return <div className="error-message">⚠️ {error}</div>;
   if (documents.length === 0) return <div className="info-message">No documents available for comparison.</div>;
 
   return (

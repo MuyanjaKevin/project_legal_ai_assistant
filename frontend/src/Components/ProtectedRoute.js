@@ -1,66 +1,54 @@
-// src/Components/ProtectedRoute.js
 import React, { useState, useEffect } from 'react';
-import { Navigate, useLocation, Outlet } from 'react-router-dom';
+import { Navigate, useLocation, useNavigate } from 'react-router-dom';
 
 const ProtectedRoute = ({ children }) => {
-  const [isChecking, setIsChecking] = useState(true);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const location = useLocation();
+  const [isVerifying, setIsVerifying] = useState(true);
+  const [isValid, setIsValid] = useState(false);
+  const navigate = useNavigate();
 
   useEffect(() => {
-    let isMounted = true;
-
-    const verifyAuthentication = async () => {
+    const verifyAuth = async () => {
       try {
         const token = localStorage.getItem('token');
-        
         if (!token) {
-          if (isMounted) {
-            setIsChecking(false);
-            setIsAuthenticated(false);
-          }
-          return;
+          throw new Error('No token found');
         }
-        
-        if (isMounted) {
-          setIsChecking(false);
-          setIsAuthenticated(true);
+
+        const response = await fetch('/api/auth/verify', {
+          headers: {
+            'Authorization': `Bearer ${token.trim()}`,
+            'Content-Type': 'application/json'
+          },
+          credentials: 'include'
+        });
+
+        if (!response.ok) {
+          throw new Error('Token verification failed');
         }
-        
+
+        const data = await response.json();
+        if (data.valid) {
+          setIsValid(true);
+        } else {
+          throw new Error('Invalid token');
+        }
       } catch (error) {
-        console.error('Authentication verification error:', error);
-        if (isMounted) {
-          setIsChecking(false);
-          setIsAuthenticated(false);
-        }
+        console.error('Auth verification error:', error);
+        localStorage.removeItem('token');
+        navigate('/login', { replace: true });
+      } finally {
+        setIsVerifying(false);
       }
     };
-    
-    verifyAuthentication();
-    
-    // Cleanup function to prevent state updates after unmount
-    return () => {
-      isMounted = false;
-    };
-  }, []);
 
-  // Show loading state while checking
-  if (isChecking) {
-    return (
-      <div className="auth-loading">
-        <p>Verifying authentication...</p>
-      </div>
-    );
+    verifyAuth();
+  }, [navigate]);
+
+  if (isVerifying) {
+    return <div>Verifying authentication...</div>;
   }
-  
-  // Redirect to login if not authenticated
-  if (!isAuthenticated) {
-    console.log('Token invalid, redirecting to login');
-    return <Navigate to="/login" replace />;
-  }
-  
-  // Render children if authenticated
-  return children || <Outlet />;
+
+  return isValid ? children : null;
 };
 
 export default ProtectedRoute;

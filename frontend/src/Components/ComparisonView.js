@@ -1,20 +1,15 @@
 import React from 'react';
-import './ComparisonView.css';
 
-function ComparisonView({ result }) {
+const ComparisonView = ({ result }) => {
   return (
-    <div className="comparison-view">
-      <h3>Comparison Result</h3>
-      <p>Similarity Score: {result.similarity_score}%</p>
-      <div className="diff-container">
-        {result.diff.map((line, index) => (
-          <div key={index} className={`diff-line ${line.startsWith('+') ? 'diff-line-added' : line.startsWith('-') ? 'diff-line-removed' : ''}`}>
-            {line}
-          </div>
-        ))}
+    <div className="comparison-result">
+      <h3>Comparison Results</h3>
+      <div className="result-content">
+        {/* Render your comparison results here */}
+        <pre>{JSON.stringify(result, null, 2)}</pre>
       </div>
     </div>
   );
-}
+};
 
 export default ComparisonView;
