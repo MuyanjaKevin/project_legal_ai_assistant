@@ -1,0 +1,424 @@
+/* src/pages/EnhancedContractGenerator.css */
+
+/* Improved spacing and layout */
+.enhanced-contract-generator {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 2rem;
+  }
+  
+  .enhanced-contract-generator h1 {
+    text-align: center;
+    margin-bottom: 2rem;
+    color: #333;
+  }
+  
+  .contract-form-container {
+    padding: 2rem;
+    background-color: white;
+    border-radius: 8px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    margin-bottom: 2rem;
+  }
+  
+  .form-and-suggestions {
+    display: grid;
+    grid-template-columns: 3fr 2fr;
+    gap: 2rem;
+    margin-bottom: 2rem;
+  }
+  
+  @media (max-width: 960px) {
+    .form-and-suggestions {
+      grid-template-columns: 1fr;
+    }
+  }
+  
+  /* Improved form styling */
+  .form-group {
+    margin-bottom: 1.5rem;
+  }
+  
+  .form-group label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 500;
+    color: #333;
+  }
+  
+  .form-group input,
+  .form-group textarea {
+    width: 100%;
+    padding: 0.75rem;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 1rem;
+    transition: border 0.2s, box-shadow 0.2s;
+  }
+  
+  .form-group input:focus,
+  .form-group textarea:focus {
+    border-color: #4285f4;
+    box-shadow: 0 0 0 2px rgba(66, 133, 244, 0.2);
+    outline: none;
+  }
+  
+  .form-group.has-error input,
+  .form-group.has-error textarea {
+    border-color: #dc3545;
+    background-color: #fff8f8;
+  }
+  
+  .form-group .error-message {
+    color: #dc3545;
+    font-size: 0.85rem;
+    margin-top: 0.25rem;
+  }
+  
+  .form-group .required {
+    color: #dc3545;
+    margin-left: 0.25rem;
+  }
+  
+  /* Improved button styling */
+  .back-button {
+    padding: 0.6rem 1rem;
+    background-color: transparent;
+    color: #666;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    margin-bottom: 1.5rem;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: all 0.2s;
+    display: inline-flex;
+    align-items: center;
+  }
+  
+  .back-button:hover {
+    background-color: #f5f5f5;
+    color: #333;
+  }
+  
+  .generate-button {
+    padding: 0.8rem 1.5rem;
+    background-color: #4285f4;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    font-size: 1rem;
+    font-weight: bold;
+    cursor: pointer;
+    transition: background-color 0.2s, transform 0.1s;
+    min-width: 200px;
+  }
+  
+  .generate-button:hover {
+    background-color: #3367d6;
+  }
+  
+  .generate-button:active {
+    transform: translateY(1px);
+  }
+  
+  .generate-button:disabled {
+    background-color: #ccc;
+    cursor: not-allowed;
+  }
+  
+  .form-actions {
+    margin-top: 2rem;
+    display: flex;
+    justify-content: center;
+  }
+  
+  /* Improved preview container styling */
+  .contract-preview-container {
+    padding: 2rem;
+    background-color: white;
+    border-radius: 8px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  }
+  
+  .preview-and-analysis {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2rem;
+    margin-top: 1.5rem;
+  }
+  
+  @media (max-width: 960px) {
+    .preview-and-analysis {
+      grid-template-columns: 1fr;
+    }
+  }
+  
+  .preview-section, .analysis-section {
+    background-color: white;
+    border-radius: 8px;
+    padding: 1.5rem;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  }
+  
+  .preview-section h3, .analysis-section h3 {
+    margin-top: 0;
+    margin-bottom: 1.5rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid #eee;
+  }
+  
+  /* Better step indicators */
+  .step-indicators {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+    padding: 0.5rem;
+    background-color: white;
+    border-radius: 8px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  }
+  
+  .step {
+    display: flex;
+    align-items: center;
+    padding: 1rem;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    flex: 1;
+    justify-content: center;
+  }
+  
+  .step:hover {
+    background-color: #f5f5f5;
+  }
+  
+  .step.active {
+    background-color: #e8f0fe;
+  }
+  
+  .step.completed {
+    background-color: #e6f4ea;
+  }
+  
+  .step-number {
+    background-color: #4285f4;
+    color: white;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 8px;
+    font-weight: bold;
+  }
+  
+  .step.completed .step-number {
+    background-color: #34a853;
+  }
+  
+  .step-connector {
+    height: 2px;
+    background-color: #ddd;
+    flex: 0.5;
+  }
+  
+  /* Template selection */
+  .template-selector {
+    background-color: white;
+    padding: 2rem;
+    border-radius: 8px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  }
+  
+  .template-advisor {
+    background-color: #f8f9fa;
+    padding: 1.5rem;
+    border-radius: 8px;
+    margin-bottom: 2rem;
+    border: 1px solid #e0e0e0;
+  }
+  
+  .advisor-input {
+    margin-top: 1rem;
+  }
+  
+  .advisor-input textarea {
+    width: 100%;
+    padding: 0.75rem;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 1rem;
+    margin-bottom: 1rem;
+    resize: vertical;
+  }
+  
+  .recommend-button {
+    padding: 0.6rem 1rem;
+    background-color: #4285f4;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: 500;
+    transition: background-color 0.2s;
+  }
+  
+  .recommend-button:hover {
+    background-color: #3367d6;
+  }
+  
+  .recommend-button:disabled {
+    background-color: #ccc;
+    cursor: not-allowed;
+  }
+  
+  .recommendation-result {
+    margin-top: 1.5rem;
+    padding: 1.5rem;
+    background-color: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    border-left: 4px solid #4285f4;
+  }
+  
+  .confidence-bar {
+    width: 100%;
+    height: 10px;
+    background-color: #e0e0e0;
+    border-radius: 5px;
+    margin: 0.75rem 0;
+    overflow: hidden;
+  }
+  
+  .confidence-level {
+    height: 100%;
+    background-color: #4285f4;
+    border-radius: 5px;
+  }
+  
+  .confidence-text {
+    font-size: 0.9rem;
+    color: #666;
+    margin-bottom: 1rem;
+  }
+  
+  .use-recommendation-button {
+    padding: 0.6rem 1rem;
+    background-color: #34a853;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: 500;
+    transition: background-color 0.2s;
+  }
+  
+  .use-recommendation-button:hover {
+    background-color: #2d9348;
+  }
+  
+  .template-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 1.5rem;
+    margin-top: 2rem;
+  }
+  
+  .template-card {
+    padding: 1.5rem;
+    border-radius: 8px;
+    background-color: white;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    cursor: pointer;
+    transition: transform 0.2s, box-shadow 0.2s;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+  }
+  
+  .template-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+  }
+  
+  .template-card h3 {
+    margin-top: 0;
+    margin-bottom: 0.75rem;
+    color: #333;
+  }
+  
+  .template-card p {
+    color: #666;
+    flex-grow: 1;
+    margin-bottom: 1.5rem;
+  }
+  
+  .select-button {
+    padding: 0.6rem 1rem;
+    background-color: #4285f4;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: 500;
+    transition: background-color 0.2s;
+    align-self: flex-start;
+  }
+  
+  .select-button:hover {
+    background-color: #3367d6;
+  }
+  
+  .template-card.recommended {
+    border: 2px solid #34a853;
+  }
+  
+  .recommendation-badge {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    padding: 0.25rem 0.5rem;
+    background-color: #34a853;
+    color: white;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    font-weight: 500;
+  }
+  
+  /* Global messages */
+  .error-message {
+    background-color: #ffebee;
+    color: #d32f2f;
+    padding: 1rem;
+    border-radius: 4px;
+    margin-bottom: 1.5rem;
+    border-left: 4px solid #d32f2f;
+  }
+  
+  .success-message {
+    background-color: #e8f5e9;
+    color: #2e7d32;
+    padding: 1rem;
+    border-radius: 4px;
+    margin-bottom: 1.5rem;
+    border-left: 4px solid #2e7d32;
+  }
+  
+  /* Loading indicators */
+  .loading-fields {
+    padding: 3rem;
+    text-align: center;
+    color: #666;
+    font-style: italic;
+    background-color: #f8f9fa;
+    border-radius: 4px;
+  }
+  
+  .loading {
+    padding: 3rem;
+    text-align: center;
+    color: #666;
+  }

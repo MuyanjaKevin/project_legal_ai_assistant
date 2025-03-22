@@ -1,20 +1,24 @@
-# In app/controllers/contracts.py
+# app/controllers/contracts.py
 
 from flask import Blueprint, request, jsonify, send_file
 from flask_jwt_extended import jwt_required, get_jwt_identity
 import os
-import tempfile
-from docx import Document
-import pdfkit
-from datetime import datetime, timedelta
+import json
+from datetime import datetime
 from app.config.database import get_database
 from bson import ObjectId
+from app.services.contract_service import (
+    generate_contract_html, 
+    save_contract_html_for_frontend,
+    get_contract_html,
+    get_ai_field_suggestions,
+    analyze_contract,
+    recommend_template
+)
+from app.services.ai_processor import suggest_contract_template
 
 contracts_bp = Blueprint('contracts', __name__)
 db = get_database()
-
-STORAGE_PATH = os.path.join(os.path.dirname(__file__), '..', '..', 'storage', 'contracts')
-os.makedirs(STORAGE_PATH, exist_ok=True)
 
 @contracts_bp.route('/templates', methods=['GET'])
 @jwt_required()
@@ -41,6 +45,186 @@ def get_templates():
     
     return jsonify({"templates": templates}), 200
 
+@contracts_bp.route('/template/<template_id>/fields', methods=['GET'])
+@jwt_required()
+def get_template_fields(template_id):
+    """Get fields for a specific template"""
+    
+    # Define template fields (in a real app, this would come from a database)
+    template_fields = {
+        "nda": [
+            { "id": "party1_name", "label": "First Party Name", "type": "text", "required": True },
+            { "id": "party1_address", "label": "First Party Address", "type": "textarea", "required": True },
+            { "id": "party2_name", "label": "Second Party Name", "type": "text", "required": True },
+            { "id": "party2_address", "label": "Second Party Address", "type": "textarea", "required": True },
+            { "id": "effective_date", "label": "Effective Date", "type": "date", "required": True },
+            { "id": "term_months", "label": "Term (Months)", "type": "number", "required": True },
+            { "id": "governing_law", "label": "Governing Law State/Country", "type": "text", "required": True },
+            { "id": "confidential_info_definition", "label": "Definition of Confidential Information", "type": "textarea", "required": False }
+        ],
+        "service-agreement": [
+            { "id": "service_provider", "label": "Service Provider Name", "type": "text", "required": True },
+            { "id": "provider_address", "label": "Provider Address", "type": "textarea", "required": True },
+            { "id": "client_name", "label": "Client Name", "type": "text", "required": True },
+            { "id": "client_address", "label": "Client Address", "type": "textarea", "required": True },
+            { "id": "effective_date", "label": "Effective Date", "type": "date", "required": True },
+            { "id": "services", "label": "Description of Services", "type": "textarea", "required": True },
+            { "id": "payment_terms", "label": "Payment Terms", "type": "textarea", "required": True },
+            { "id": "term_length", "label": "Term Length", "type": "text", "required": True },
+            { "id": "governing_law", "label": "Governing Law", "type": "text", "required": True }
+        ],
+        "employment-agreement": [
+            { "id": "employer_name", "label": "Employer Name", "type": "text", "required": True },
+            { "id": "employer_address", "label": "Employer Address", "type": "textarea", "required": True },
+            { "id": "employee_name", "label": "Employee Name", "type": "text", "required": True },
+            { "id": "employee_address", "label": "Employee Address", "type": "textarea", "required": True },
+            { "id": "position", "label": "Position/Title", "type": "text", "required": True },
+            { "id": "start_date", "label": "Start Date", "type": "date", "required": True },
+            { "id": "salary", "label": "Salary", "type": "text", "required": True },
+            { "id": "work_hours", "label": "Work Hours", "type": "text", "required": True },
+            { "id": "benefits", "label": "Benefits", "type": "textarea", "required": False },
+            { "id": "termination_terms", "label": "Termination Terms", "type": "textarea", "required": True },
+            { "id": "governing_law", "label": "Governing Law", "type": "text", "required": True }
+        ]
+    }
+    
+    if template_id not in template_fields:
+        return jsonify({"message": "Template not found"}), 404
+    
+    return jsonify({"fields": template_fields[template_id]}), 200
+
+@contracts_bp.route('/template/<template_id>/suggest-fields', methods=['POST'])
+@jwt_required()
+def suggest_template_fields(template_id):
+    """Get AI-suggested values for template fields"""
+    try:
+        user_id = get_jwt_identity()
+        data = request.json or {}
+        
+        # Get suggestions based on context provided
+        suggestions = get_ai_field_suggestions(template_id, data.get('context', {}))
+        
+        return jsonify({
+            "message": "Field suggestions generated",
+            "suggestions": suggestions
+        }), 200
+    except Exception as e:
+        return jsonify({"message": f"Error generating suggestions: {str(e)}"}), 500
+
+@contracts_bp.route('/generate-html', methods=['POST'])
+@jwt_required()
+def generate_contract_html_endpoint():
+    """Generate HTML content for a contract"""
+    try:
+        user_id = get_jwt_identity()
+        data = request.json
+        
+        print(f"Generating contract HTML, user_id: {user_id}")
+        print(f"Request data: {json.dumps(data)}")
+        
+        if not data or 'templateId' not in data or 'formData' not in data:
+            print("Missing required data in request")
+            return jsonify({"message": "Missing required data"}), 400
+            
+        template_id = data['templateId']
+        form_data = data['formData']
+        
+        print(f"Generating HTML for template: {template_id}")
+        
+        # Generate HTML content
+        html_content = generate_contract_html(template_id, form_data)
+        
+        if not html_content:
+            print("Failed to generate contract HTML")
+            return jsonify({"message": "Failed to generate contract HTML"}), 500
+        
+        print(f"Generated HTML content, length: {len(html_content)}")
+        
+        # Save HTML content and return contract ID
+        contract_id = save_contract_html_for_frontend(html_content, user_id, template_id, form_data)
+        
+        print(f"Saved contract with ID: {contract_id}")
+        
+        # Return both the HTML content and contract ID to avoid extra requests
+        return jsonify({
+            "message": "Contract HTML generated successfully",
+            "contract_id": contract_id,
+            "html_content": html_content
+        }), 200
+    
+    except Exception as e:
+        print(f"Error generating contract HTML: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({"message": f"Error generating contract HTML: {str(e)}"}), 500
+
+@contracts_bp.route('/<contract_id>/html', methods=['GET'])
+@jwt_required()
+def get_contract_html_endpoint(contract_id):
+    """Get HTML content for a contract"""
+    try:
+        user_id = get_jwt_identity()
+        
+        # Get HTML content
+        html_content = get_contract_html(contract_id, user_id)
+        
+        if not html_content:
+            return jsonify({"message": "Contract not found"}), 404
+        
+        return jsonify({
+            "message": "Contract HTML retrieved successfully",
+            "html_content": html_content,
+            "contract_id": contract_id
+        }), 200
+    
+    except Exception as e:
+        return jsonify({"message": f"Error retrieving contract HTML: {str(e)}"}), 500
+
+@contracts_bp.route('/<contract_id>/analyze', methods=['POST'])
+@jwt_required()
+def analyze_contract_endpoint(contract_id):
+    """Analyze a contract for potential issues or improvements"""
+    try:
+        user_id = get_jwt_identity()
+        
+        # Analyze contract
+        analysis = analyze_contract(contract_id, user_id)
+        
+        if not analysis:
+            return jsonify({"message": "Contract not found or analysis failed"}), 404
+        
+        return jsonify({
+            "message": "Contract analyzed successfully",
+            "analysis": analysis
+        }), 200
+    
+    except Exception as e:
+        return jsonify({"message": f"Error analyzing contract: {str(e)}"}), 500
+
+@contracts_bp.route('/recommend-template', methods=['POST'])
+@jwt_required()
+def recommend_template_endpoint():
+    """Recommend a contract template based on user requirements"""
+    try:
+        data = request.json
+        
+        if not data or 'requirements' not in data:
+            return jsonify({"message": "Missing requirements"}), 400
+        
+        user_requirements = data['requirements']
+        
+        # Get recommendation from AI
+        recommendation = suggest_contract_template(user_requirements)
+        
+        return jsonify({
+            "message": "Template recommendation generated",
+            "recommendation": recommendation
+        }), 200
+    
+    except Exception as e:
+        return jsonify({"message": f"Error recommending template: {str(e)}"}), 500
+
+# Keep the original endpoints for backward compatibility
 @contracts_bp.route('/generate', methods=['POST'])
 @jwt_required()
 def generate_contract():
@@ -54,152 +238,23 @@ def generate_contract():
             
         template_id = data['templateId']
         form_data = data['formData']
-        output_format = data.get('outputFormat', 'pdf')  # Default to PDF
         
-        # In a real app, you'd load the template from a database or file system
-        # For now, we'll use a simple switch statement
-        template_content = get_template_content(template_id, form_data)
+        # Generate HTML content first
+        html_content = generate_contract_html(template_id, form_data)
         
-        if not template_content:
-            return jsonify({"message": "Template not found"}), 404
+        if not html_content:
+            return jsonify({"message": "Failed to generate contract HTML"}), 500
         
-        # Generate temporary file
-        temp_file = tempfile.NamedTemporaryFile(delete=False)
+        # Save contract metadata with HTML content
+        contract_id = save_contract_html_for_frontend(html_content, user_id, template_id, form_data)
         
-        if output_format == 'pdf':
-            # Generate PDF
-            pdf_path = generate_pdf(template_content, temp_file.name)
-            
-            # Save contract metadata to database
-            contract_id = save_contract_metadata(user_id, template_id, form_data, pdf_path)
-            
-            # Return file download path
-            return jsonify({
-                "message": "Contract generated successfully",
-                "contract_id": str(contract_id),
-                "download_url": f"/api/contracts/{contract_id}/download"
-            }), 200
-        
-        elif output_format == 'docx':
-            # Generate DOCX
-            docx_path = generate_docx(template_content, temp_file.name)
-            
-            # Save contract metadata to database
-            contract_id = save_contract_metadata(user_id, template_id, form_data, docx_path)
-            
-            # Return file download path
-            return jsonify({
-                "message": "Contract generated successfully",
-                "contract_id": str(contract_id),
-                "download_url": f"/api/contracts/{contract_id}/download"
-            }), 200
-        
-        else:
-            return jsonify({"message": "Unsupported output format"}), 400
+        # Return contract ID and HTML content for frontend rendering
+        return jsonify({
+            "message": "Contract generated successfully",
+            "contract_id": str(contract_id),
+            "html_content": html_content,
+            "download_url": f"/api/contracts/{contract_id}/download"
+        }), 200
     
     except Exception as e:
         return jsonify({"message": f"Error generating contract: {str(e)}"}), 500
-
-@contracts_bp.route('/<contract_id>/download', methods=['GET'])
-@jwt_required()
-def download_contract(contract_id):
-    """Download a generated contract"""
-    try:
-        user_id = get_jwt_identity()
-        
-        # Find contract in database
-        contract = db.contracts.find_one({"_id": ObjectId(contract_id), "user_id": user_id})
-        
-        if not contract:
-            return jsonify({"message": "Contract not found"}), 404
-        
-        file_path = contract.get('file_path')
-        if not file_path or not os.path.exists(file_path):
-            return jsonify({"message": "Contract file not found"}), 404
-        
-        # Get file format from path
-        file_format = os.path.splitext(file_path)[1].lstrip('.')
-        
-        # Set appropriate content type
-        content_type = 'application/pdf' if file_format == 'pdf' else 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
-        
-        # Return file download
-        return send_file(
-            file_path, 
-            as_attachment=True,
-            download_name=f"{contract.get('template_id')}_{datetime.now().strftime('%Y%m%d')}.{file_format}",
-            mimetype=content_type
-        )
-    
-    except Exception as e:
-        return jsonify({"message": f"Error downloading contract: {str(e)}"}), 500
-
-def get_template_content(template_id, form_data):
-    """Get the template content with variables replaced"""
-    # In a real app, load template from file or database
-    # For now, use hardcoded templates
-    templates = {
-        "nda": """NON-DISCLOSURE AGREEMENT\n\nTHIS NON-DISCLOSURE AGREEMENT (the "Agreement") is made and entered into as of {effective_date} by and between {party1_name}, located at {party1_address} ("Disclosing Party") and {party2_name}, located at {party2_address} ("Receiving Party").\n\n1. PURPOSE...""",
-        "service-agreement": """SERVICE AGREEMENT\n\nTHIS SERVICE AGREEMENT (the "Agreement") is made and entered into as of {effective_date} by and between {service_provider}, located at {provider_address} ("Service Provider") and {client_name}, located at {client_address} ("Client")...""",
-        "employment-agreement": """EMPLOYMENT AGREEMENT\n\nTHIS EMPLOYMENT AGREEMENT (the "Agreement") is made and entered into as of {start_date} by and between {employer_name}, located at {employer_address} ("Employer") and {employee_name}, located at {employee_address} ("Employee")..."""
-    }
-    
-    if template_id not in templates:
-        return None
-    
-    # Replace variables in template
-    content = templates[template_id]
-    for key, value in form_data.items():
-        content = content.replace(f"{{{key}}}", value)
-    
-    return content
-
-def generate_pdf(content, output_path):
-    """Generate PDF file from content"""
-    # In a real app, use a proper HTML template with styling
-    html_content = f"<pre>{content}</pre>"
-    
-    # Use pdfkit to convert HTML to PDF
-    pdf_path = f"{output_path}.pdf"
-    pdfkit.from_string(html_content, pdf_path)
-    
-    return pdf_path
-
-def generate_docx(content, output_path):
-    """Generate DOCX file from content"""
-    doc = Document()
-    
-    # Split content by newlines and add as paragraphs
-    for paragraph in content.split('\n'):
-        doc.add_paragraph(paragraph)
-    
-    # Save document
-    docx_path = f"{output_path}.docx"
-    doc.save(docx_path)
-    
-    return docx_path
-
-def save_contract_metadata(user_id, template_id, form_data, file_path):
-    """Save contract metadata to database"""
-    contract = {
-        "user_id": user_id,
-        "template_id": template_id,
-        "form_data": form_data,
-        "file_path": file_path,
-        "created_at": datetime.now()
-    }
-    
-    result = db.contracts.insert_one(contract)
-    return result.inserted_id
-
-def cleanup_old_contracts():
-    """Remove contract files older than 24 hours"""
-    cutoff = datetime.now() - timedelta(hours=24)
-    old_contracts = db.contracts.find({'created_at': {'$lt': cutoff}})
-    
-    for contract in old_contracts:
-        try:
-            os.remove(contract['file_path'])
-            db.contracts.delete_one({'_id': contract['_id']})
-        except Exception as e:
-            print(f"Error cleaning up contract {contract['_id']}: {e}")

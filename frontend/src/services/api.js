@@ -116,6 +116,71 @@ export const generateContract = async (templateId, formData, outputFormat) => {
   }
 };
 
+// New contract-related functions
+export const getTemplates = async () => {
+  try {
+    const response = await api.get('/contracts/templates');
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching templates:', error);
+    throw error;
+  }
+};
+
+export const getTemplateFields = async (templateId) => {
+  try {
+    const response = await api.get(`/contracts/template/${templateId}/fields`);
+    return response.data;
+  } catch (error) {
+    console.error(`Error fetching fields for template ${templateId}:`, error);
+    throw error;
+  }
+};
+
+export const suggestFields = async (templateId, context) => {
+  try {
+    const response = await api.post(`/contracts/template/${templateId}/suggest-fields`, { context });
+    return response.data;
+  } catch (error) {
+    console.error('Error getting field suggestions:', error);
+    throw error;
+  }
+};
+
+export const generateContractHtml = async (templateId, formData) => {
+  try {
+    const response = await api.post('/contracts/generate-html', {
+      templateId,
+      formData
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Error generating contract HTML:', error);
+    throw error;
+  }
+};
+
+export const analyzeContract = async (contractId) => {
+  try {
+    const response = await api.post(`/contracts/${contractId}/analyze`);
+    return response.data;
+  } catch (error) {
+    console.error('Error analyzing contract:', error);
+    throw error;
+  }
+};
+
+export const recommendTemplate = async (requirements) => {
+  try {
+    const response = await api.post('/contracts/recommend-template', { requirements });
+    return response.data;
+  } catch (error) {
+    console.error('Error recommending template:', error);
+    throw error;
+  }
+};
+
+// Auth services
 export const login = async (credentials) => {
   try {
     const response = await api.post('/auth/login', credentials);
@@ -148,7 +213,15 @@ export const verifyToken = async () => {
   }
 };
 
+// Export both the axios instance methods and the service functions
 export default {
+  // Core axios methods
+  get: (url, config) => api.get(url, config),
+  post: (url, data, config) => api.post(url, data, config),
+  put: (url, data, config) => api.put(url, data, config),
+  delete: (url, config) => api.delete(url, config),
+  
+  // Service functions
   login,
   register,
   getDocuments,
@@ -158,6 +231,13 @@ export default {
   suggestDocumentCategory,
   compareDocuments,
   generateContract,
-  verifyToken
+  verifyToken,
+  
+  // New contract functions
+  getTemplates,
+  getTemplateFields,
+  suggestFields,
+  generateContractHtml,
+  analyzeContract,
+  recommendTemplate
 };
-

@@ -1,4 +1,3 @@
-// src/App.js
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import Dashboard from './pages/Dashboard';
@@ -9,6 +8,7 @@ import DocumentUpload from './pages/DocumentUpload';
 import LandingPage from './pages/LandingPage';
 import DocumentComparison from './pages/DocumentComparison';
 import ContractGenerator from './pages/ContractGenerator';
+import EnhancedContractGenerator from './pages/EnhancedContractGenerator';
 import Navigation from './Components/Navigation';
 import ProtectedRoute from './Components/ProtectedRoute';
 import './styles/theme.css';
@@ -107,8 +107,20 @@ function App() {
               isAuthenticated ? <DocumentComparison /> : <Navigate to="/login" />
             } 
           />
+          
+          {/* Contract generation routes */}
           <Route 
             path="/contracts" 
+            element={
+              <ProtectedRoute>
+                <EnhancedContractGenerator />
+              </ProtectedRoute>
+            } 
+          />
+          
+          {/* Keep the original route accessible at /contracts/basic for backward compatibility */}
+          <Route 
+            path="/contracts/basic" 
             element={
               <ProtectedRoute>
                 <ContractGenerator />

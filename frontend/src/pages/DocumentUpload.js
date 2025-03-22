@@ -1,4 +1,3 @@
-// src/pages/DocumentUpload.js
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { uploadDocument, suggestDocumentCategory } from '../services/api';
@@ -10,7 +9,7 @@ const DocumentUpload = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [message, setMessage] = useState(null);
-  const [useAutoCategory, setUseAutoCategory] = useState(true); // New state for auto-categorization
+  const [useAutoCategory, setUseAutoCategory] = useState(true);
   const [suggestingCategory, setSuggestingCategory] = useState(false);
   const navigate = useNavigate();
 
@@ -38,7 +37,6 @@ const DocumentUpload = () => {
         setCategories(data.categories || []);
       } catch (err) {
         console.error('Error fetching categories:', err);
-        // Don't set error state here, just use default categories
       }
     };
 
@@ -47,6 +45,8 @@ const DocumentUpload = () => {
 
   const handleFileChange = (e) => {
     setFile(e.target.files[0]);
+    setError(null);
+    setMessage(null);
   };
 
   const handleCategoryChange = (e) => {
@@ -70,14 +70,6 @@ const DocumentUpload = () => {
     formData.append('category', category);
     
     try {
-      // Get token from localStorage
-      const token = localStorage.getItem('token');
-      if (!token) {
-        throw new Error('Authentication required. Please log in again.');
-      }
-      
-      console.log('Uploading file:', file.name, 'Category:', category);
-      
       // Upload document
       const response = await uploadDocument(formData);
       
@@ -85,13 +77,10 @@ const DocumentUpload = () => {
       if (useAutoCategory && response.document_id) {
         setSuggestingCategory(true);
         try {
-          console.log('Auto-categorizing document...');
           const categoryResponse = await suggestDocumentCategory(response.document_id);
-          console.log('Suggested category:', categoryResponse.category);
           setMessage(`Document uploaded successfully! AI suggested category: ${categoryResponse.category}`);
         } catch (categoryError) {
           console.error('Error suggesting category:', categoryError);
-          // Don't fail the upload if category suggestion fails
           setMessage('Document uploaded successfully! (Category suggestion failed)');
         } finally {
           setSuggestingCategory(false);
@@ -100,15 +89,16 @@ const DocumentUpload = () => {
         setMessage('Document uploaded successfully!');
       }
       
+      // Redirect to dashboard after successful upload
       setTimeout(() => navigate('/'), 2000);
     } catch (err) {
       console.error('Upload error:', err);
-      setError(err.message);
+      setError(err.message || 'Upload failed');
     } finally {
       setLoading(false);
     }
   };
-  
+
   // Default categories if API call fails
   const defaultCategories = [
     "Uncategorized", 

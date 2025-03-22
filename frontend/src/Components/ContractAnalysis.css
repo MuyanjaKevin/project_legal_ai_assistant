@@ -1,0 +1,191 @@
+/* src/components/ContractAnalysis.css */
+.contract-analysis {
+    background-color: #f8f9fa;
+    border: 1px solid #e9ecef;
+    border-radius: 8px;
+    padding: 1.5rem;
+    margin: 1.5rem 0;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  }
+  
+  .analysis-title {
+    margin-top: 0;
+    margin-bottom: 1.5rem;
+    color: #1f2937;
+    font-size: 1.2rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+  }
+  
+  .analysis-title::before {
+    content: '🔍';
+    margin-right: 0.5rem;
+  }
+  
+  .analysis-header {
+    display: flex;
+    gap: 2rem;
+    margin-bottom: 1.5rem;
+    background-color: #ffffff;
+    padding: 1.5rem;
+    border-radius: 8px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  }
+  
+  .completeness-score {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    border: 3px solid #22c55e; /* Default green, will be overridden */
+    border-radius: 50%;
+    width: 80px;
+    height: 80px;
+    flex-shrink: 0;
+  }
+  
+  .score-value {
+    font-size: 1.8rem;
+    font-weight: 700;
+    line-height: 1;
+    color: #22c55e; /* Default green, will be overridden */
+  }
+  
+  .score-max {
+    font-size: 1rem;
+    font-weight: 400;
+  }
+  
+  .score-label {
+    font-size: 0.75rem;
+    color: #6b7280;
+    margin-top: 0.25rem;
+  }
+  
+  .assessment-summary {
+    flex-grow: 1;
+  }
+  
+  .assessment-summary h4 {
+    margin-top: 0;
+    margin-bottom: 0.5rem;
+    color: #374151;
+    font-size: 1rem;
+  }
+  
+  .assessment-summary p {
+    margin: 0;
+    color: #4b5563;
+    line-height: 1.5;
+  }
+  
+  .analysis-tabs {
+    display: flex;
+    margin-bottom: 1rem;
+    border-bottom: 2px solid #e5e7eb;
+  }
+  
+  .tab-button {
+    background: none;
+    border: none;
+    padding: 0.75rem 1.5rem;
+    font-size: 1rem;
+    font-weight: 500;
+    color: #6b7280;
+    cursor: pointer;
+    position: relative;
+    transition: color 0.2s ease;
+  }
+  
+  .tab-button:hover {
+    color: #4f46e5;
+  }
+  
+  .tab-button.active {
+    color: #4f46e5;
+  }
+  
+  .tab-button.active::after {
+    content: '';
+    position: absolute;
+    bottom: -2px;
+    left: 0;
+    width: 100%;
+    height: 2px;
+    background-color: #4f46e5;
+  }
+  
+  .tab-count {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    font-size: 0.75rem;
+    background-color: #e5e7eb;
+    color: #4b5563;
+    border-radius: 50%;
+    margin-left: 0.5rem;
+  }
+  
+  .analysis-content {
+    background-color: #ffffff;
+    border-radius: 8px;
+    padding: 1rem;
+    max-height: 300px;
+    overflow-y: auto;
+  }
+  
+  .analysis-item {
+    display: flex;
+    align-items: flex-start;
+    padding: 0.75rem;
+    border-bottom: 1px solid #f3f4f6;
+  }
+  
+  .analysis-item:last-child {
+    border-bottom: none;
+  }
+  
+  .item-icon {
+    flex-shrink: 0;
+    margin-right: 0.75rem;
+    font-size: 1.2rem;
+  }
+  
+  .item-text {
+    color: #4b5563;
+    line-height: 1.5;
+    font-size: 0.95rem;
+  }
+  
+  .empty-list {
+    text-align: center;
+    padding: 2rem;
+    color: #9ca3af;
+    font-style: italic;
+  }
+  
+  .analysis-loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 3rem;
+  }
+  
+  .analysis-spinner {
+    border: 3px solid rgba(0, 0, 0, 0.1);
+    border-radius: 50%;
+    border-top: 3px solid #4f46e5;
+    width: 32px;
+    height: 32px;
+    animation: spin 1s linear infinite;
+    margin-bottom: 1rem;
+  }
+  
+  @keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
