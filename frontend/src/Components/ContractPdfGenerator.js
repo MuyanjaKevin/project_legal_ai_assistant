@@ -1,5 +1,5 @@
 // src/Components/ContractPdfGenerator.js
-import React, { useRef, useState, useEffect } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
 import './ContractPdfGenerator.css';
@@ -7,58 +7,47 @@ import './ContractPdfGenerator.css';
 const ContractPdfGenerator = ({ htmlContent, contractTitle, onGenerated }) => {
   const [isGenerating, setIsGenerating] = useState(false);
   const [progress, setProgress] = useState(0);
-  const [pdfUrl, setPdfUrl] = useState(null);
+  const [pdfBlob, setPdfBlob] = useState(null);
   const [error, setError] = useState(null);
-  const [previewReady, setPreviewReady] = useState(false);
   const [loading, setLoading] = useState(true);
-  const contractRef = useRef(null);
-  const containerRef = useRef(null);
+  const [displayContent, setDisplayContent] = useState('');
+  const previewRef = useRef(null);
 
+  // Process the HTML content when it changes
   useEffect(() => {
-    // Reset states when content changes
-    if (pdfUrl) {
-      URL.revokeObjectURL(pdfUrl);
-      setPdfUrl(null);
-    }
+    console.log("HTML content received, length:", htmlContent ? htmlContent.length : 0);
     
+    // Reset states
+    setPdfBlob(null);
     setError(null);
-    setPreviewReady(false);
     setLoading(true);
     
-    // Debug HTML content
-    console.log("HTML Content received:", htmlContent ? `${htmlContent.substring(0, 100)}... (length: ${htmlContent.length})` : "None");
-    
-    // Check if HTML content is provided
+    // Validate HTML content
     if (!htmlContent) {
       setError("No content received from server. Please try again.");
       setLoading(false);
       return;
     }
     
-    // Add a timeout to give a better user experience and ensure DOM is ready
+    // Safely set the display content with a short delay
     const timer = setTimeout(() => {
       try {
-        if (contractRef.current) {
-          // Set preview as ready
-          setPreviewReady(true);
-          setLoading(false);
-        } else {
-          setError("Preview container not available. Please refresh the page.");
-          setLoading(false);
-        }
+        setDisplayContent(htmlContent);
+        setLoading(false);
       } catch (err) {
-        console.error("Error preparing preview:", err);
-        setError("Error preparing contract preview: " + err.message);
+        console.error("Error setting HTML content:", err);
+        setError("Error preparing preview: " + err.message);
         setLoading(false);
       }
-    }, 1000);
+    }, 500);
     
     return () => clearTimeout(timer);
-  }, [htmlContent, pdfUrl]);
+  }, [htmlContent]);
 
+  // Generate PDF using direct HTML text with better formatting
   const generatePdf = async () => {
-    if (!htmlContent || !contractRef.current) {
-      setError("No content available to generate PDF");
+    if (!htmlContent || !previewRef.current) {
+      setError("Preview not ready. Please try again.");
       return;
     }
     
@@ -69,165 +58,213 @@ const ContractPdfGenerator = ({ htmlContent, contractTitle, onGenerated }) => {
       
       console.log("Starting PDF generation process...");
       
-      // Get the preview element and prepare for capture
-      const previewElement = contractRef.current;
+      // Default PDF settings
+      const pdfWidth = 8.5; // inches (letter)
+      const pdfHeight = 11; // inches (letter)
+      const margins = {
+        top: 0.75,    // 0.75 inch top margin
+        bottom: 0.75, // 0.75 inch bottom margin
+        left: 0.75,   // 0.75 inch left margin
+        right: 0.75   // 0.75 inch right margin
+      };
       
-      // Temporarily modify the preview element for better capture
-      const originalStyle = previewElement.style.cssText;
-      previewElement.style.width = '8.5in';
-      previewElement.style.margin = '0';
-      previewElement.style.padding = '0.5in';
-      previewElement.style.backgroundColor = '#FFFFFF';
-      previewElement.style.fontFamily = 'Times New Roman, serif';
-      
-      setProgress(20);
-      
-      // Initialize PDF document
+      // Initialize PDF with proper settings
       const pdf = new jsPDF({
         orientation: 'portrait',
         unit: 'in',
-        format: 'letter' // 8.5 x 11 inches
+        format: 'letter',
+        compress: true
       });
       
-      // Get PDF dimensions
-      const pdfWidth = pdf.internal.pageSize.getWidth();
-      const pdfHeight = pdf.internal.pageSize.getHeight();
+      setProgress(20);
+      
+      // Get content from HTML
+      const element = previewRef.current;
+      
+      // Create a clone of the element to avoid modifying the displayed content
+      const clone = element.cloneNode(true);
+      
+      // Add specific styling for print to the clone
+      clone.style.width = `${pdfWidth - margins.left - margins.right}in`;
+      clone.style.padding = '0';
+      clone.style.fontFamily = 'Arial, sans-serif';
+      
+      // Improve styling for the PDF rendering
+      const styleTag = document.createElement('style');
+      styleTag.innerHTML = `
+        * { box-sizing: border-box; }
+        h1, h2, h3, h4, h5, h6 { margin-top: 12px; margin-bottom: 8px; }
+        p { margin-top: 5px; margin-bottom: 5px; }
+        strong { font-weight: bold; }
+      `;
+      clone.appendChild(styleTag);
+      
+      // Append the clone to the body temporarily for html2canvas
+      document.body.appendChild(clone);
       
       setProgress(30);
       
       try {
-        // Use a better rendering scale for high-quality PDF
-        const scale = 2; // Higher scale for better quality
-        
-        // Capture the content as a canvas
-        console.log("Capturing HTML with html2canvas...");
-        const canvas = await html2canvas(previewElement, {
-          scale: scale,
+        // Enhanced canvas capture settings
+        const canvas = await html2canvas(clone, {
+          scale: 3, // Higher scale for better quality
           useCORS: true,
-          logging: true, // Enable logging to help with debugging
-          backgroundColor: '#FFFFFF',
           allowTaint: true,
-          // Improve rendering quality
+          logging: false,
+          backgroundColor: '#FFFFFF',
           imageTimeout: 15000,
-          removeContainer: false
+          windowWidth: pdfWidth * 96 - (margins.left + margins.right) * 96, // Convert inches to px (96dpi)
+          windowHeight: 10000, // arbitrary large height
+          x: 0,
+          y: 0,
+          scrollX: 0,
+          scrollY: 0
         });
         
-        setProgress(70);
-        console.log("HTML captured as canvas");
+        // Remove the clone from the document
+        document.body.removeChild(clone);
         
-        // Convert canvas to image and add to PDF
+        setProgress(60);
+        
+        // Calculate PDF pages with proper margins
         const imgData = canvas.toDataURL('image/jpeg', 1.0);
+        const imgWidth = pdfWidth - margins.left - margins.right;
+        const pageHeight = pdfHeight - margins.top - margins.bottom;
+        const imgHeight = (canvas.height * imgWidth) / canvas.width;
         
-        // Calculate dimensions to fit the page properly
-        const imgProps = pdf.getImageProperties(imgData);
-        const imgWidth = pdfWidth;
-        const imgHeight = (imgProps.height * imgWidth) / imgProps.width;
-        
-        // If image is taller than the page, we need to split it into multiple pages
         let heightLeft = imgHeight;
-        let position = 0;
-        let page = 1;
+        let position = margins.top; // Start at top margin
+        let pageCount = 1;
         
-        // Add first page
-        pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight);
-        heightLeft -= pdfHeight;
+        // Add title to the first page
+        pdf.setFontSize(16);
+        pdf.setFont('helvetica', 'bold');
+        pdf.text(contractTitle || 'NON-DISCLOSURE AGREEMENT', pdfWidth/2, 0.5, { align: 'center' });
         
-        // Add additional pages if needed
+        // Add first page content
+        pdf.addImage(
+          imgData, 
+          'JPEG', 
+          margins.left, // left margin
+          position, // top position 
+          imgWidth, // width with margins
+          imgHeight // height
+        );
+        
+        heightLeft -= pageHeight;
+        
+        // Add additional pages as needed
         while (heightLeft > 0) {
-          position = -pdfHeight * page;
+          position = margins.top - pdfHeight * pageCount;
+          
+          // Add new page
           pdf.addPage();
-          pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight);
-          heightLeft -= pdfHeight;
-          page++;
+          
+          // Add page number in footer
+          pdf.setFontSize(10);
+          pdf.setFont('helvetica', 'normal');
+          pdf.text(`Page ${pageCount + 1}`, pdfWidth - margins.right - 0.5, pdfHeight - 0.3);
+          
+          // Add image again but positioned to show next portion
+          pdf.addImage(
+            imgData, 
+            'JPEG', 
+            margins.left, 
+            position, 
+            imgWidth, 
+            imgHeight
+          );
+          
+          heightLeft -= pageHeight;
+          pageCount++;
         }
+        
+        // Add page number to first page
+        pdf.setPage(1);
+        pdf.setFontSize(10);
+        pdf.text(`Page 1`, pdfWidth - margins.right - 0.5, pdfHeight - 0.3);
         
         setProgress(90);
-        console.log("Added images to PDF, pages:", page);
+        console.log(`Generated PDF with ${pageCount} pages`);
       } catch (canvasError) {
-        console.error("Error during canvas generation:", canvasError);
+        // Clean up the clone if error occurred
+        if (document.body.contains(clone)) {
+          document.body.removeChild(clone);
+        }
         
-        // Fallback approach: render each section of the document separately
-        console.log("Using section-by-section fallback approach");
+        console.error("Canvas generation failed:", canvasError);
         
-        // Get all major sections from the preview
-        const sections = previewElement.querySelectorAll('.section, .header, .signature-block');
+        // Fallback: Create a simple text PDF with better formatting
+        pdf.setFontSize(18);
+        pdf.setFont('helvetica', 'bold');
+        pdf.text(contractTitle || 'NON-DISCLOSURE AGREEMENT', pdfWidth/2, 1, {align: 'center'});
         
-        if (sections.length > 0) {
-          let yPosition = 0.5; // Start 0.5 inches from top
+        // Extract and format text content
+        const textContent = element.innerText || element.textContent || '';
+        
+        // Split content by sections
+        const sections = textContent.split(/\*\*([^*]+)\*\*/g)
+          .filter(section => section.trim().length > 0);
+        
+        let yPos = 1.5;
+        
+        for (let i = 0; i < sections.length; i++) {
+          const section = sections[i].trim();
           
-          // Add title to first page if available
-          const headerElement = previewElement.querySelector('.header');
-          if (headerElement) {
-            pdf.setFontSize(16);
-            pdf.setFont('times', 'bold');
-            pdf.text(headerElement.textContent.trim(), pdfWidth / 2, yPosition, { align: 'center' });
-            yPosition += 0.5; // Move down after title
-          }
-          
-          // Process each section
-          pdf.setFontSize(12);
-          pdf.setFont('times', 'normal');
-          
-          for (let i = 0; i < sections.length; i++) {
-            const section = sections[i];
+          // If it's a header (even index in the split)
+          if (i % 2 === 0) {
+            // Add a bit of space before each section
+            yPos += 0.3;
             
-            // Skip header as we've already processed it
-            if (section.classList.contains('header')) continue;
-            
-            // Get section text
-            const sectionText = section.textContent.trim();
-            
-            // Split text into lines to fit page width
-            const lines = pdf.splitTextToSize(sectionText, pdfWidth - 1);
-            
-            // Check if we need to add a new page
-            const sectionHeight = lines.length * 0.2; // Estimate height
-            if (yPosition + sectionHeight > pdfHeight - 0.5) {
-              pdf.addPage();
-              yPosition = 0.5; // Reset position for new page
-            }
-            
-            // Add section title if available
-            const sectionTitle = section.querySelector('.section-title');
-            if (sectionTitle) {
-              pdf.setFont('times', 'bold');
-              pdf.text(sectionTitle.textContent.trim(), 0.5, yPosition);
-              yPosition += 0.25;
-              pdf.setFont('times', 'normal');
-            }
-            
-            // Add section content
-            pdf.text(lines, 0.5, yPosition);
-            yPosition += sectionHeight + 0.3; // Add space after section
-          }
-        } else {
-          // Ultra fallback: just add the text content
-          pdf.setFontSize(12);
-          const textContent = previewElement.textContent || previewElement.innerText;
-          if (textContent && textContent.trim()) {
-            const lines = pdf.splitTextToSize(textContent, pdfWidth - 1);
-            pdf.text(0.5, 0.5, lines);
+            pdf.setFontSize(14);
+            pdf.setFont('helvetica', 'bold');
+            pdf.text(section, 0.75, yPos);
+            yPos += 0.4;
           } else {
-            pdf.text(0.5, 0.5, "Error: Unable to extract content from contract.");
+            // For regular content
+            pdf.setFontSize(12);
+            pdf.setFont('helvetica', 'normal');
+            
+            // Split text to fit page width
+            const splitText = pdf.splitTextToSize(section, pdfWidth - 1.5);
+            
+            // Check if we need a new page
+            if (yPos + splitText.length * 0.2 > pdfHeight - 0.75) {
+              pdf.addPage();
+              yPos = 1;
+            }
+            
+            pdf.text(splitText, 0.75, yPos);
+            yPos += splitText.length * 0.2 + 0.3;
           }
         }
+        
+        console.log("Generated fallback text-based PDF");
       }
       
-      // Restore original style
-      previewElement.style.cssText = originalStyle;
+      // Generate PDF as array buffer for better reliability
+      const arrayBuffer = pdf.output('arraybuffer');
       
-      // Generate PDF blob
-      const pdfBlob = pdf.output('blob');
-      const url = URL.createObjectURL(pdfBlob);
-      setPdfUrl(url);
+      // Create a proper blob with correct MIME type
+      const blob = new Blob([arrayBuffer], { type: 'application/pdf' });
       
-      // Notify parent component that PDF is ready
+      setPdfBlob(blob);
+      
+      // Notify parent component if needed
       if (onGenerated) {
-        onGenerated(pdfBlob, url);
+        // Create a temporary URL just for the callback
+        const tempUrl = URL.createObjectURL(blob);
+        onGenerated(blob, tempUrl);
+        // Revoke URL after callback
+        setTimeout(() => URL.revokeObjectURL(tempUrl), 100);
       }
       
       setProgress(100);
       console.log("PDF generation completed successfully");
+      
+      // Trigger download with a slight delay
+      setTimeout(() => handleDownload(blob), 100);
+      
     } catch (error) {
       console.error('Error generating PDF:', error);
       setError("Failed to generate PDF: " + error.message);
@@ -236,27 +273,43 @@ const ContractPdfGenerator = ({ htmlContent, contractTitle, onGenerated }) => {
     }
   };
 
-  const handleDownload = () => {
-    if (pdfUrl) {
+  const handleDownload = (blobToDownload) => {
+    const fileBlob = blobToDownload || pdfBlob;
+    
+    if (!fileBlob) {
+      setError("No PDF available to download");
+      return;
+    }
+    
+    try {
       console.log("Triggering PDF download...");
+      
+      // Create a secure download URL
+      const blobUrl = URL.createObjectURL(fileBlob);
+      
+      // Create download element
       const link = document.createElement('a');
-      link.href = pdfUrl;
+      link.href = blobUrl;
       link.download = `${contractTitle || 'Legal-Contract'}.pdf`;
+      link.style.display = 'none';
+      
+      // Add to DOM, click, then remove
       document.body.appendChild(link);
       link.click();
-      document.body.removeChild(link);
-    } else {
-      setError("No PDF available to download");
+      
+      // Clean up after a short delay
+      setTimeout(() => {
+        document.body.removeChild(link);
+        URL.revokeObjectURL(blobUrl);
+      }, 200);
+    } catch (error) {
+      console.error("Download failed:", error);
+      setError("Failed to download PDF: " + error.message);
     }
   };
 
-  // Check if we have just empty HTML or a message indicating no preview content
-  const hasRealContent = htmlContent && 
-    !htmlContent.includes('<div class="empty-preview">') &&
-    !htmlContent.includes('No preview content available');
-
   return (
-    <div className="pdf-generator" ref={containerRef}>
+    <div className="pdf-generator">
       {error && <div className="pdf-error-message">{error}</div>}
       
       {isGenerating ? (
@@ -273,26 +326,28 @@ const ContractPdfGenerator = ({ htmlContent, contractTitle, onGenerated }) => {
         </div>
       ) : (
         <div className="pdf-actions">
-          {!pdfUrl ? (
-            loading ? (
-              <button className="generate-pdf-button loading-button" disabled>
-                <span className="loading-icon"></span> Loading Preview...
-              </button>
-            ) : (
-              <button 
-                className="generate-pdf-button"
-                onClick={generatePdf}
-                disabled={!previewReady || !hasRealContent || loading}
-              >
-                {!previewReady || !hasRealContent ? 'Preview Not Ready' : 'Generate PDF'}
-              </button>
-            )
+          {!pdfBlob ? (
+            <button 
+              className={`generate-pdf-button ${loading ? 'loading-button' : ''}`}
+              onClick={generatePdf}
+              disabled={loading || !displayContent}
+            >
+              {loading ? (
+                <>
+                  <span className="loading-icon"></span> Loading Preview...
+                </>
+              ) : !displayContent ? (
+                'Preview Not Ready'
+              ) : (
+                'Generate PDF'
+              )}
+            </button>
           ) : (
             <div className="pdf-ready">
               <p>Your PDF is ready!</p>
               <button 
                 className="download-pdf-button"
-                onClick={handleDownload}
+                onClick={() => handleDownload()}
               >
                 Download PDF
               </button>
@@ -307,16 +362,16 @@ const ContractPdfGenerator = ({ htmlContent, contractTitle, onGenerated }) => {
             <div className="loading-spinner"></div>
             <p>Loading Preview...</p>
           </div>
-        ) : htmlContent ? (
-          <div 
-            ref={contractRef} 
-            className="contract-preview"
-            dangerouslySetInnerHTML={{ __html: htmlContent }}
-          ></div>
-        ) : (
+        ) : !displayContent ? (
           <div className="empty-preview">
             <p>No preview content available. Please try again.</p>
           </div>
+        ) : (
+          <div 
+            ref={previewRef}
+            className="contract-preview"
+            dangerouslySetInnerHTML={{ __html: displayContent }}
+          ></div>
         )}
       </div>
     </div>

@@ -29,7 +29,7 @@ def estimate_cost(input_tokens, output_tokens, model="gpt-3.5-turbo"):
 
 def format_openai_response(response_text, expected_format='json'):
     """
-    Formats and validates OpenAI API responses
+    Enhanced formatter for OpenAI API responses
     
     Args:
         response_text (str): The raw response text from OpenAI
@@ -39,49 +39,54 @@ def format_openai_response(response_text, expected_format='json'):
         The formatted response (dict for json, str for text)
     """
     if expected_format == 'json':
-        # Try to extract JSON if it's embedded in other text
-        json_match = re.search(r'({[\s\S]*})', response_text)
-        
-        if json_match:
-            try:
-                json_text = json_match.group(1)
-                # Clean up common formatting issues
-                json_text = json_text.replace('```json', '').replace('```', '')
-                return json.loads(json_text)
-            except json.JSONDecodeError as e:
-                print(f"Error parsing JSON response: {e}")
-                print(f"Response text: {response_text}")
-                # Return a structured error response
-                return {
-                    "error": True,
-                    "message": "Failed to parse API response as JSON",
-                    "raw_response": response_text
-                }
-        
-        # If no JSON found, try to parse the whole text
+        # First try to see if the entire response is valid JSON
         try:
             return json.loads(response_text)
         except json.JSONDecodeError:
-            # Last resort: try to build a structured response from raw text
-            lines = response_text.strip().split('\n')
-            structured_response = {}
+            pass
             
-            for line in lines:
-                if ':' in line:
-                    key, value = line.split(':', 1)
-                    structured_response[key.strip()] = value.strip()
-                    
-            if structured_response:
-                return structured_response
-            else:
-                return {
-                    "error": True,
-                    "message": "Could not parse response into structured format",
-                    "raw_response": response_text
-                }
+        # Try to extract JSON if it's embedded in other text (like markdown code blocks)
+        json_patterns = [
+            r'```json\n([\s\S]*?)\n```',  # JSON in markdown code block with json
+            r'```\n([\s\S]*?)\n```',      # JSON in markdown code block without lang
+            r'({[\s\S]*})',               # Any JSON-like object
+        ]
+        
+        for pattern in json_patterns:
+            json_match = re.search(pattern, response_text)
+            if json_match:
+                try:
+                    json_text = json_match.group(1)
+                    # Clean up common formatting issues
+                    json_text = json_text.replace('```json', '').replace('```', '')
+                    return json.loads(json_text)
+                except json.JSONDecodeError:
+                    continue
+        
+        # Last resort: try to build a structured response from raw text
+        lines = response_text.strip().split('\n')
+        structured_response = {}
+        
+        for line in lines:
+            if ':' in line:
+                key, value = line.split(':', 1)
+                structured_response[key.strip()] = value.strip()
+                
+        if structured_response:
+            return structured_response
+        else:
+            # Return a fallback response
+            return {
+                "error": True,
+                "message": "Could not parse response as JSON",
+                "raw_response": response_text[:200] + "..." if len(response_text) > 200 else response_text
+            }
     else:
-        # For text format, just clean up the response
-        return response_text.strip()
+        # For text format, clean up the response
+        # Remove common markdown and code block artifacts
+        text = re.sub(r'```[a-zA-Z]*\n', '', response_text)
+        text = text.replace('```', '')
+        return text.strip()
 
 def safe_openai_call(model, messages, max_tokens=None, temperature=0.7, 
                     expected_format='json', default_result=None):
@@ -471,7 +476,17 @@ def suggest_document_category(document_id):
     return suggested_category
 
 def get_field_suggestions(template_id, field_id, context=None):
-    """Get AI suggestions for a specific field based on context"""
+    """
+    Enhanced function to get AI suggestions for a specific field based on context
+    
+    Args:
+        template_id (str): The template identifier
+        field_id (str): The field identifier to get suggestions for
+        context (dict, optional): Context information for better suggestions
+        
+    Returns:
+        dict: Suggestion with value and label
+    """
     # Ensure we have context
     if not context:
         context = {}
@@ -508,6 +523,18 @@ def get_field_suggestions(template_id, field_id, context=None):
         "termination_terms": "Termination Terms"
     }
     
+    # Default values for certain date fields
+    if field_id == "effective_date" or field_id == "start_date":
+        return {
+            "value": datetime.now().strftime("%Y-%m-%d"),
+            "label": field_labels.get(field_id, field_id.replace('_', ' ').title())
+        }
+    
+    # Get template type
+    template_type = template_id
+    if "-" in template_id:
+        template_type = template_id.replace("-", "_")
+    
     # Build a prompt based on the template and field
     template_descriptions = {
         "nda": "Non-Disclosure Agreement for protecting confidential information",
@@ -518,91 +545,127 @@ def get_field_suggestions(template_id, field_id, context=None):
     # Update the field prompts to be more specific and ask for realistic examples
     field_prompts = {
         # NDA fields
-        "party1_name": "Suggest a realistic company name for the first party (disclosing party) in the NDA. Provide just the name, not a placeholder or format.",
-        "party1_address": "Suggest a realistic complete business address for the first party. Provide an actual example address, not a placeholder.",
-        "party2_name": "Suggest a realistic company name for the second party (receiving party) in the NDA. Provide just the name, not a placeholder or format.",
-        "party2_address": "Suggest a realistic complete business address for the second party. Provide an actual example address, not a placeholder.",
+        "party1_name": "Suggest a realistic company name for the first party (disclosing party) in the NDA. Provide just the name, not a placeholder.",
+        "party1_address": "Suggest a realistic complete business address for the first party.",
+        "party2_name": "Suggest a realistic company name for the second party (receiving party) in the NDA. Provide just the name.",
+        "party2_address": "Suggest a realistic complete business address for the second party.",
         "term_months": "Suggest a typical duration in months for an NDA. Provide only the number.",
         "governing_law": "Suggest a jurisdiction for the governing law of the agreement. Provide an actual state or country name.",
-        "confidential_info_definition": "Provide a comprehensive definition of confidential information for an NDA. Give a real definition, not a placeholder.",
+        "confidential_info_definition": "Provide a comprehensive definition of confidential information for an NDA. Give a real definition.",
         
         # Service Agreement fields
-        "service_provider": "Suggest a realistic company name for the service provider. Provide an actual business name, not a placeholder.",
-        "provider_address": "Suggest a realistic complete business address for the service provider. Provide an actual example address, not a placeholder.",
-        "client_name": "Suggest a realistic company name for the client. Provide an actual business name, not a placeholder.",
-        "client_address": "Suggest a realistic complete business address for the client. Provide an actual example address, not a placeholder.",
-        "services": "Describe specific, realistic professional services that might be provided. Give actual examples, not placeholders.",
-        "payment_terms": "Suggest specific, realistic payment terms for a service agreement. Give actual example terms, not placeholders.",
-        "term_length": "Suggest a typical duration for a service agreement. Provide a specific time period.",
+        "service_provider": "Suggest a realistic company name for the service provider.",
+        "provider_address": "Suggest a realistic complete business address for the service provider.",
+        "client_name": "Suggest a realistic company name for the client.",
+        "client_address": "Suggest a realistic complete business address for the client.",
+        "services": "Describe specific, realistic professional services that might be provided.",
+        "payment_terms": "Suggest specific, realistic payment terms for a service agreement.",
+        "term_length": "Suggest a typical duration for a service agreement.",
         
         # Employment Agreement fields
-        "employer_name": "Suggest a realistic company name for the employer. Provide an actual business name, not a placeholder.",
-        "employer_address": "Suggest a realistic complete business address for the employer. Provide an actual example address, not a placeholder.",
-        "employee_name": "Suggest a realistic person's name for the employee. Provide an actual name, not a placeholder.",
-        "employee_address": "Suggest a realistic residential address for the employee. Provide an actual example address, not a placeholder.",
-        "position": "Suggest a realistic job title for the position. Provide an actual job title, not a placeholder.",
-        "salary": "Suggest a realistic salary amount. Provide an actual salary figure, not a placeholder.",
-        "work_hours": "Suggest realistic work hours. Provide actual hours, not a placeholder.",
-        "benefits": "List specific, realistic benefits that might be included in an employment agreement. Give actual examples, not placeholders.",
-        "termination_terms": "Suggest realistic termination terms for an employment agreement. Give actual example terms, not placeholders."
+        "employer_name": "Suggest a realistic company name for the employer.",
+        "employer_address": "Suggest a realistic complete business address for the employer.",
+        "employee_name": "Suggest a realistic person's name for the employee.",
+        "employee_address": "Suggest a realistic residential address for the employee.",
+        "position": "Suggest a realistic job title for the position.",
+        "salary": "Suggest a realistic salary amount.",
+        "work_hours": "Suggest realistic work hours.",
+        "benefits": "List specific, realistic benefits that might be included in an employment agreement.",
+        "termination_terms": "Suggest realistic termination terms for an employment agreement."
     }
     
     # Get the specific prompt for this field
-    field_prompt = field_prompts.get(field_id, f"Suggest a realistic value for the {field_id} field. Provide an actual example, not a placeholder.")
+    field_prompt = field_prompts.get(field_id, f"Suggest a realistic value for the {field_id} field.")
     
-    # Add context information
+    # Add context information if available
     context_info = ""
     if context:
-        context_info = "Based on the following information:\n"
+        related_fields = []
         for key, value in context.items():
-            if value:  # Only include non-empty fields
-                context_info += f"- {key}: {value}\n"
+            if value and key != field_id:
+                related_fields.append(f"- {field_labels.get(key, key)}: {value}")
+                
+        if related_fields:
+            context_info = "Use this information as context for your suggestion:\n" + "\n".join(related_fields)
     
-    # Create final prompt with specific instructions to avoid placeholder format
-    prompt = f"""You are helping draft a {template_descriptions.get(template_id, "legal contract")}.
+    # Create final prompt with specific instructions
+    prompt = f"""You are helping draft a {template_descriptions.get(template_type, "legal contract")}.
     
 {field_prompt}
 
-IMPORTANT: Provide ONLY the suggested text. DO NOT use placeholder format like [text] or {{text}}. 
-Provide realistic, specific information that could be used directly in a contract.
-Do not include any explanations or labels."""
+{context_info}
+
+IMPORTANT: Provide ONLY the suggested text value. No explanations or labels."""
     
-    # Default values for certain date fields
-    if field_id == "effective_date" or field_id == "start_date":
+    try:
+        # Define fallback values based on field type
+        default_suggestions = {
+            "party1_name": "Acme Corporation",
+            "party1_address": "123 Main Street, Suite 400, San Francisco, CA 94105",
+            "party2_name": "XYZ Enterprises",
+            "party2_address": "456 Market Street, Suite 200, San Francisco, CA 94105",
+            "term_months": "24",
+            "governing_law": "California, United States",
+            "confidential_info_definition": "Any non-public information, data, or materials shared between the parties.",
+            "service_provider": "Professional Services Inc.",
+            "provider_address": "789 Oak Street, Suite 300, Chicago, IL 60601",
+            "client_name": "Global Innovations Ltd.",
+            "client_address": "321 Pine Avenue, Suite 500, New York, NY 10001",
+            "services": "Professional consulting services including business analysis, strategy development, and implementation support.",
+            "payment_terms": "Payment due within 30 days of invoice. Monthly billing for ongoing services.",
+            "term_length": "One year from the effective date",
+            "employer_name": "TechSolutions Inc.",
+            "employer_address": "555 Technology Parkway, Suite 800, Seattle, WA 98101",
+            "employee_name": "John Smith",
+            "employee_address": "789 Residential Lane, Apt 3B, Seattle, WA 98102",
+            "position": "Senior Software Engineer",
+            "salary": "$120,000 per year",
+            "work_hours": "40 hours per week, Monday through Friday, 9:00 AM to 5:00 PM",
+            "benefits": "Health insurance, dental coverage, 401(k) matching, paid time off, and professional development opportunities.",
+            "termination_terms": "Either party may terminate with 2 weeks written notice. Company may terminate immediately for cause."
+        }
+        
+        default_suggestion = default_suggestions.get(field_id, "Example value")
+        
+        # Make the API call
+        suggestion = safe_openai_call(
+            model="gpt-3.5-turbo",
+            messages=[
+                {"role": "system", "content": "You are a legal contract drafting assistant. Provide realistic, specific information."},
+                {"role": "user", "content": prompt}
+            ],
+            max_tokens=150,
+            expected_format='text',
+            default_result=default_suggestion
+        )
+        
+        # Clean up the response
+        suggestion = suggestion.strip('"\'.,;: \n\r\t')
+        
+        # Remove any remaining placeholder formatting
+        suggestion = re.sub(r'[\[\]{}]', '', suggestion)
+        
+        # If we have a numeric field, ensure it's a number
+        if field_id == "term_months":
+            # Extract just the number if possible
+            numbers = re.findall(r'\d+', suggestion)
+            if numbers:
+                suggestion = numbers[0]
+        
+        # Return in standardized format
         return {
-            "value": datetime.now().strftime("%Y-%m-%d"),
+            "value": suggestion,
+            "label": field_labels.get(field_id, field_id.replace('_', ' ').title())
+        }
+        
+    except Exception as e:
+        # Fallback in case of error
+        print(f"Error generating suggestion for {field_id}: {str(e)}")
+        return {
+            "value": default_suggestions.get(field_id, "Example value"),
             "label": field_labels.get(field_id, field_id.replace('_', ' ').title())
         }
     
-    # Use safe API call
-    default_suggestion = "Example value"
-    
-    suggestion = safe_openai_call(
-        model="gpt-3.5-turbo",
-        messages=[
-            {"role": "system", "content": "You are a legal contract drafting assistant. Provide realistic, specific information."},
-            {"role": "user", "content": prompt}
-        ],
-        max_tokens=100,
-        expected_format='text',
-        default_result=default_suggestion
-    )
-    
-    # Remove any remaining placeholder formatting
-    suggestion = suggestion.replace('[', '').replace(']', '')
-    
-    # If we have a numeric field, ensure it's a number
-    if field_id == "term_months":
-        # Extract just the number if possible
-        numbers = re.findall(r'\d+', suggestion)
-        if numbers:
-            suggestion = numbers[0]
-    
-    # Return in standardized format
-    return {
-        "value": suggestion,
-        "label": field_labels.get(field_id, field_id.replace('_', ' ').title())
-    }
 
 def analyze_contract_content(template_id, contract_text, form_data=None):
     """Analyze contract content for potential issues or improvements"""

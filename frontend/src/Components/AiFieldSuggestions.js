@@ -1,5 +1,5 @@
 // src/Components/AiFieldSuggestions.js
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import './AiFieldSuggestions.css';
 
 const AiFieldSuggestions = ({ 
@@ -11,6 +11,34 @@ const AiFieldSuggestions = ({
   suggestions 
 }) => {
   const [expandedField, setExpandedField] = useState(null);
+  const [normalizedSuggestions, setNormalizedSuggestions] = useState({});
+
+  // Normalize suggestions on component mount or when suggestions change
+  useEffect(() => {
+    // Handle different suggestion formats and normalize them
+    const normalized = {};
+    
+    if (suggestions && typeof suggestions === 'object') {
+      Object.keys(suggestions).forEach(fieldId => {
+        const suggestion = suggestions[fieldId];
+        
+        if (typeof suggestion === 'object' && suggestion.value) {
+          // Already in the correct format
+          normalized[fieldId] = suggestion;
+        } else {
+          // Convert string format to object format
+          normalized[fieldId] = {
+            value: suggestion,
+            label: fieldId.replace(/([A-Z])/g, ' $1')
+                       .replace(/_/g, ' ')
+                       .replace(/^\w/, c => c.toUpperCase())
+          };
+        }
+      });
+    }
+    
+    setNormalizedSuggestions(normalized);
+  }, [suggestions]);
 
   // Toggle field expansion
   const toggleField = (fieldId) => {
@@ -19,17 +47,17 @@ const AiFieldSuggestions = ({
 
   // Apply a single suggestion
   const handleApplySuggestion = (fieldId) => {
-    // Handle both object format and string format suggestions
-    const suggestionValue = typeof suggestions[fieldId] === 'object' 
-      ? suggestions[fieldId].value 
-      : suggestions[fieldId];
-      
-    onApplySuggestion(fieldId, suggestionValue);
-    setExpandedField(null); // Collapse after applying
+    // Get the value from normalized suggestions
+    const suggestionValue = normalizedSuggestions[fieldId]?.value;
+    
+    if (suggestionValue) {
+      onApplySuggestion(fieldId, suggestionValue);
+      setExpandedField(null); // Collapse after applying
+    }
   };
 
   // Check if we have any suggestions
-  const hasSuggestions = suggestions && Object.keys(suggestions).length > 0;
+  const hasSuggestions = normalizedSuggestions && Object.keys(normalizedSuggestions).length > 0;
 
   if (isGeneratingSuggestions) {
     return (
@@ -69,13 +97,11 @@ const AiFieldSuggestions = ({
       
       <div className="ai-suggestions-list">
         {hasSuggestions ? (
-          Object.keys(suggestions).map(fieldId => {
-            // Handle both object format and string format
-            const suggestion = suggestions[fieldId];
-            const suggestionValue = typeof suggestion === 'object' ? suggestion.value : suggestion;
-            const fieldLabel = typeof suggestion === 'object' && suggestion.label ? 
-              suggestion.label : 
-              fieldId.replace(/([A-Z])/g, ' $1').replace(/_/g, ' ').replace(/^\w/, c => c.toUpperCase());
+          Object.keys(normalizedSuggestions).map(fieldId => {
+            const suggestion = normalizedSuggestions[fieldId];
+            const fieldLabel = suggestion.label || fieldId.replace(/([A-Z])/g, ' $1')
+                              .replace(/_/g, ' ')
+                              .replace(/^\w/, c => c.toUpperCase());
               
             return (
               <div 
@@ -101,7 +127,7 @@ const AiFieldSuggestions = ({
                 {expandedField === fieldId && (
                   <div className="suggestion-content">
                     <div className="suggestion-value">
-                      {suggestionValue}
+                      {suggestion.value}
                     </div>
                   </div>
                 )}

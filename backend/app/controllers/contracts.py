@@ -131,8 +131,20 @@ def generate_contract_html_endpoint():
         
         print(f"Generating HTML for template: {template_id}")
         
+        # Validate form data
+        if not isinstance(form_data, dict):
+            return jsonify({"message": "Form data must be an object"}), 400
+            
+        # Sanitize form data - ensure no empty strings or None values that could break template
+        sanitized_form_data = {}
+        for key, value in form_data.items():
+            if value is not None:
+                sanitized_form_data[key] = str(value).strip()
+            else:
+                sanitized_form_data[key] = ""
+        
         # Generate HTML content
-        html_content = generate_contract_html(template_id, form_data)
+        html_content = generate_contract_html(template_id, sanitized_form_data)
         
         if not html_content:
             print("Failed to generate contract HTML")
@@ -140,12 +152,36 @@ def generate_contract_html_endpoint():
         
         print(f"Generated HTML content, length: {len(html_content)}")
         
+        # Ensure HTML has proper structure
+        if not html_content.strip().startswith('<!DOCTYPE html>'):
+            html_content = f"""
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <meta charset="UTF-8">
+                <title>{template_id.replace('-', ' ').title()} Contract</title>
+                <style>
+                    body {{
+                        font-family: 'Times New Roman', Times, serif;
+                        font-size: 12pt;
+                        line-height: 1.5;
+                        color: #000;
+                        padding: 2rem;
+                    }}
+                </style>
+            </head>
+            <body>
+                {html_content}
+            </body>
+            </html>
+            """
+        
         # Save HTML content and return contract ID
-        contract_id = save_contract_html_for_frontend(html_content, user_id, template_id, form_data)
+        contract_id = save_contract_html_for_frontend(html_content, user_id, template_id, sanitized_form_data)
         
         print(f"Saved contract with ID: {contract_id}")
         
-        # Return both the HTML content and contract ID to avoid extra requests
+        # Return both the HTML content and contract ID
         return jsonify({
             "message": "Contract HTML generated successfully",
             "contract_id": contract_id,
@@ -239,14 +275,50 @@ def generate_contract():
         template_id = data['templateId']
         form_data = data['formData']
         
+        # Validate and sanitize form data (applying the same improvements)
+        if not isinstance(form_data, dict):
+            return jsonify({"message": "Form data must be an object"}), 400
+            
+        # Sanitize form data
+        sanitized_form_data = {}
+        for key, value in form_data.items():
+            if value is not None:
+                sanitized_form_data[key] = str(value).strip()
+            else:
+                sanitized_form_data[key] = ""
+        
         # Generate HTML content first
-        html_content = generate_contract_html(template_id, form_data)
+        html_content = generate_contract_html(template_id, sanitized_form_data)
         
         if not html_content:
             return jsonify({"message": "Failed to generate contract HTML"}), 500
         
+        # Ensure HTML has proper structure (same improvement as above)
+        if not html_content.strip().startswith('<!DOCTYPE html>'):
+            html_content = f"""
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <meta charset="UTF-8">
+                <title>{template_id.replace('-', ' ').title()} Contract</title>
+                <style>
+                    body {{
+                        font-family: 'Times New Roman', Times, serif;
+                        font-size: 12pt;
+                        line-height: 1.5;
+                        color: #000;
+                        padding: 2rem;
+                    }}
+                </style>
+            </head>
+            <body>
+                {html_content}
+            </body>
+            </html>
+            """
+        
         # Save contract metadata with HTML content
-        contract_id = save_contract_html_for_frontend(html_content, user_id, template_id, form_data)
+        contract_id = save_contract_html_for_frontend(html_content, user_id, template_id, sanitized_form_data)
         
         # Return contract ID and HTML content for frontend rendering
         return jsonify({
@@ -257,4 +329,7 @@ def generate_contract():
         }), 200
     
     except Exception as e:
+        print(f"Error generating contract: {str(e)}")
+        import traceback
+        traceback.print_exc()
         return jsonify({"message": f"Error generating contract: {str(e)}"}), 500

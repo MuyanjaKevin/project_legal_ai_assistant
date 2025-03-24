@@ -7,6 +7,24 @@ import api from '../services/api';
 import './ContractGenerator.css';
 import './EnhancedContractGenerator.css';
 
+// Add sanitizeHtml function right after imports
+function sanitizeHtml(html) {
+  if (!html) return '';
+  
+  // Add DOCTYPE if missing
+  if (!html.includes('<!DOCTYPE')) {
+    html = '<!DOCTYPE html>\n<html><head><meta charset="UTF-8"></head><body>' + html + '</body></html>';
+  }
+  
+  // Ensure essential tags
+  if (!html.includes('<body')) {
+    html = html.replace('<html>', '<html><head><meta charset="UTF-8"></head><body>');
+    html = html.replace('</html>', '</body></html>');
+  }
+  
+  return html;
+}
+
 function EnhancedContractGenerator() {
   const [templates, setTemplates] = useState([]);
   const [selectedTemplate, setSelectedTemplate] = useState(null);
@@ -323,6 +341,13 @@ function EnhancedContractGenerator() {
         console.error("No HTML content in response");
         throw new Error("No contract content received from server");
       }
+      
+      // Sanitize the HTML content to ensure proper structure
+      htmlContent = sanitizeHtml(htmlContent);
+      
+      // Add diagnostic log for HTML content - first 200 chars
+      console.log("HTML content structure:", 
+        htmlContent.substring(0, 200) + "... (length: " + htmlContent.length + ")");
       
       // Set HTML content and contract ID
       console.log("Setting HTML content, length:", htmlContent.length);

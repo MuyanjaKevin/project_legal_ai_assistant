@@ -28,6 +28,8 @@
     display: flex;
     align-items: center;
     justify-content: center;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
   }
   
   .generate-pdf-button:active,
@@ -68,22 +70,31 @@
   .download-pdf-button {
     background-color: #34a853;
     color: white;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   }
   
   .download-pdf-button:hover {
     background-color: #2d9348;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
   }
   
   .pdf-ready {
     display: flex;
     flex-direction: column;
     align-items: center;
+    background-color: #f8fdf9;
+    padding: 1rem;
+    border-radius: 8px;
+    border: 1px solid #c8e6c9;
+    text-align: center;
+    width: 100%;
+    max-width: 400px;
   }
   
   .pdf-ready p {
     margin-bottom: 0.75rem;
     font-weight: bold;
-    color: #34a853;
+    color: #2e7d32;
   }
   
   .pdf-error-message {
@@ -142,7 +153,7 @@
   
   .contract-preview-container {
     position: relative;
-    min-height: 400px;
+    min-height: 500px;
     border: 1px solid #ddd;
     border-radius: 4px;
     background-color: white;
@@ -171,8 +182,8 @@
   
   .contract-preview {
     width: 100%;
-    min-height: 400px;
-    max-height: 600px;
+    min-height: 500px;
+    max-height: 700px;
     padding: 2rem;
     background-color: white;
     font-family: 'Times New Roman', Times, serif;
@@ -180,6 +191,7 @@
     line-height: 1.5;
     color: #000;
     overflow-y: auto;
+    box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.05);
   }
   
   .empty-preview {
@@ -190,6 +202,8 @@
     color: #666;
     font-style: italic;
     text-align: center;
+    background-color: #f9f9f9;
+    border-radius: 4px;
   }
   
   /* Contract content styling */
@@ -225,6 +239,693 @@
   
   .contract-preview .signature-name {
     margin-top: 0.5em;
+  }
+  
+  @keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
+
+  /* src/Components/ContractPdfGenerator.css */
+
+.pdf-generator {
+    display: flex;
+    flex-direction: column;
+    margin-bottom: 2rem;
+    padding: 1.5rem;
+    background-color: white;
+    border-radius: 8px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  }
+  
+  .pdf-actions {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 1.5rem;
+  }
+  
+  .generate-pdf-button,
+  .download-pdf-button {
+    padding: 0.75rem 1.5rem;
+    border: none;
+    border-radius: 4px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: background-color 0.2s, transform 0.1s;
+    min-width: 180px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  
+  .generate-pdf-button:active,
+  .download-pdf-button:active {
+    transform: translateY(1px);
+  }
+  
+  .generate-pdf-button {
+    background-color: #4285f4;
+    color: white;
+  }
+  
+  .generate-pdf-button:hover {
+    background-color: #3367d6;
+  }
+  
+  .generate-pdf-button:disabled {
+    background-color: #ccc;
+    cursor: not-allowed;
+  }
+  
+  .loading-button {
+    background-color: #e0e0e0;
+    color: #666;
+  }
+  
+  .loading-icon {
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-radius: 50%;
+    border-top-color: #fff;
+    animation: spin 1s ease-in-out infinite;
+    margin-right: 8px;
+  }
+  
+  .download-pdf-button {
+    background-color: #34a853;
+    color: white;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  }
+  
+  .download-pdf-button:hover {
+    background-color: #2d9348;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+  }
+  
+  .pdf-ready {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    background-color: #f8fdf9;
+    padding: 1rem;
+    border-radius: 8px;
+    border: 1px solid #c8e6c9;
+    text-align: center;
+    width: 100%;
+    max-width: 400px;
+  }
+  
+  .pdf-ready p {
+    margin-bottom: 0.75rem;
+    font-weight: bold;
+    color: #2e7d32;
+  }
+  
+  .pdf-error-message {
+    padding: 1rem;
+    margin-bottom: 1.5rem;
+    background-color: #ffebee;
+    color: #d32f2f;
+    border-radius: 4px;
+    text-align: center;
+    border-left: 4px solid #d32f2f;
+  }
+  
+  .generating-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.7);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+  }
+  
+  .generating-content {
+    background-color: white;
+    padding: 2rem;
+    border-radius: 8px;
+    text-align: center;
+    max-width: 90%;
+    width: 400px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  }
+  
+  .progress-container {
+    height: 20px;
+    width: 100%;
+    background-color: #e0e0e0;
+    border-radius: 10px;
+    margin-bottom: 1rem;
+    overflow: hidden;
+  }
+  
+  .progress-bar {
+    height: 100%;
+    background-color: #4285f4;
+    border-radius: 10px;
+    transition: width 0.3s ease;
+  }
+  
+  .generating-content p {
+    margin: 0;
+    font-weight: bold;
+  }
+  
+  .contract-preview-container {
+    position: relative;
+    min-height: 500px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    background-color: white;
+    overflow: hidden;
+  }
+  
+  .preview-loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 400px;
+    background-color: #f8f9fa;
+    text-align: center;
+  }
+  
+  .loading-spinner {
+    width: 40px;
+    height: 40px;
+    border: 3px solid rgba(66, 133, 244, 0.2);
+    border-top: 3px solid #4285f4;
+    border-radius: 50%;
+    margin-bottom: 1rem;
+    animation: spin 1s linear infinite;
+  }
+  
+  /* Important: These styles ensure contract content displays properly */
+  .contract-preview {
+    width: 100%;
+    min-height: 500px;
+    max-height: 700px;
+    padding: 2rem;
+    background-color: white;
+    font-family: 'Times New Roman', Times, serif;
+    font-size: 14px;
+    line-height: 1.5;
+    color: #000;
+    overflow-y: auto;
+    display: block !important;
+  }
+  
+  .contract-content {
+    display: block !important;
+  }
+  
+  /* Contract content styling */
+  .contract-preview .header,
+  .contract-content .header {
+    text-align: center;
+    font-size: 16pt;
+    font-weight: bold;
+    margin-bottom: 1.5em;
+    border-bottom: 1px solid #000;
+    padding-bottom: 0.5em;
+    display: block;
+  }
+  
+  .contract-preview .section,
+  .contract-content .section {
+    margin-top: 1.5em;
+    page-break-inside: avoid;
+    display: block;
+  }
+  
+  .contract-preview .section-title,
+  .contract-content .section-title {
+    font-weight: bold;
+    margin-bottom: 0.5em;
+    display: block;
+  }
+  
+  .contract-preview .signature-block,
+  .contract-content .signature-block {
+    margin-top: 3em;
+    page-break-inside: avoid;
+    display: block;
+  }
+  
+  .contract-preview .signature-line,
+  .contract-content .signature-line {
+    border-top: 1px solid #000;
+    width: 50%;
+    margin-top: 4em;
+    display: block;
+  }
+  
+  .contract-preview .signature-name,
+  .contract-content .signature-name {
+    margin-top: 0.5em;
+    display: block;
+  }
+  
+  .empty-preview {
+    display: flex;
+    height: 200px;
+    align-items: center;
+    justify-content: center;
+    color: #666;
+    font-style: italic;
+    text-align: center;
+    background-color: #f9f9f9;
+    border-radius: 4px;
+  }
+  
+  @keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
+  /* src/Components/ContractPdfGenerator.css */
+
+.pdf-generator {
+    display: flex;
+    flex-direction: column;
+    margin-bottom: 2rem;
+    padding: 1.5rem;
+    background-color: white;
+    border-radius: 8px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  }
+  
+  .pdf-actions {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 1.5rem;
+  }
+  
+  .generate-pdf-button,
+  .download-pdf-button {
+    padding: 0.75rem 1.5rem;
+    border: none;
+    border-radius: 4px;
+    font-weight: bold;
+    cursor: pointer;
+    min-width: 180px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  
+  .generate-pdf-button {
+    background-color: #4285f4;
+    color: white;
+  }
+  
+  .generate-pdf-button:hover {
+    background-color: #3367d6;
+  }
+  
+  .generate-pdf-button:disabled {
+    background-color: #ccc;
+    cursor: not-allowed;
+  }
+  
+  .loading-button {
+    background-color: #e0e0e0;
+    color: #666;
+  }
+  
+  .loading-icon {
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-radius: 50%;
+    border-top-color: #fff;
+    animation: spin 1s ease-in-out infinite;
+    margin-right: 8px;
+  }
+  
+  .download-pdf-button {
+    background-color: #34a853;
+    color: white;
+  }
+  
+  .pdf-ready {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+    max-width: 400px;
+  }
+  
+  .pdf-error-message {
+    padding: 1rem;
+    margin-bottom: 1.5rem;
+    background-color: #ffebee;
+    color: #d32f2f;
+    border-radius: 4px;
+    text-align: center;
+    border-left: 4px solid #d32f2f;
+  }
+  
+  .generating-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.7);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+  }
+  
+  .generating-content {
+    background-color: white;
+    padding: 2rem;
+    border-radius: 8px;
+    text-align: center;
+    max-width: 90%;
+    width: 400px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  }
+  
+  .progress-container {
+    height: 20px;
+    width: 100%;
+    background-color: #e0e0e0;
+    border-radius: 10px;
+    margin-bottom: 1rem;
+    overflow: hidden;
+  }
+  
+  .progress-bar {
+    height: 100%;
+    background-color: #4285f4;
+    border-radius: 10px;
+    transition: width 0.3s ease;
+  }
+  
+  .contract-preview-container {
+    position: relative;
+    min-height: 500px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    background-color: white;
+    overflow: hidden;
+  }
+  
+  .preview-loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 400px;
+    background-color: #f8f9fa;
+    text-align: center;
+  }
+  
+  .loading-spinner {
+    width: 40px;
+    height: 40px;
+    border: 3px solid rgba(66, 133, 244, 0.2);
+    border-top: 3px solid #4285f4;
+    border-radius: 50%;
+    margin-bottom: 1rem;
+    animation: spin 1s linear infinite;
+  }
+  
+  /* The most important part - contract styling */
+  .contract-preview {
+    width: 100%;
+    min-height: 500px;
+    max-height: 700px;
+    padding: 2rem;
+    background-color: white;
+    font-family: 'Times New Roman', Times, serif;
+    font-size: 14px;
+    line-height: 1.5;
+    color: #000;
+    overflow-y: auto;
+  }
+  
+  .contract-content {
+    display: block;
+  }
+  
+  /* Make sure contract elements display properly */
+  .header, 
+  .section, 
+  .section-title,
+  .signature-block {
+    display: block;
+  }
+  
+  .header {
+    text-align: center;
+    font-size: 16pt;
+    font-weight: bold;
+    margin-bottom: 1.5em;
+  }
+  
+  .section {
+    margin-top: 1.5em;
+  }
+  
+  .section-title {
+    font-weight: bold;
+    margin-bottom: 0.5em;
+  }
+  
+  .signature-block {
+    margin-top: 3em;
+  }
+  
+  .empty-preview {
+    display: flex;
+    height: 200px;
+    align-items: center;
+    justify-content: center;
+    color: #666;
+    font-style: italic;
+    text-align: center;
+  }
+  
+  @keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
+
+  /* src/Components/ContractPdfGenerator.css */
+
+.pdf-generator {
+    display: flex;
+    flex-direction: column;
+    margin-bottom: 2rem;
+    padding: 1.5rem;
+    background-color: white;
+    border-radius: 8px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  }
+  
+  .pdf-actions {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 1.5rem;
+  }
+  
+  .generate-pdf-button,
+  .download-pdf-button {
+    padding: 0.75rem 1.5rem;
+    border: none;
+    border-radius: 4px;
+    font-weight: bold;
+    cursor: pointer;
+    min-width: 180px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  
+  .generate-pdf-button {
+    background-color: #4285f4;
+    color: white;
+  }
+  
+  .generate-pdf-button:hover {
+    background-color: #3367d6;
+  }
+  
+  .generate-pdf-button:disabled {
+    background-color: #ccc;
+    cursor: not-allowed;
+  }
+  
+  .loading-button {
+    background-color: #e0e0e0;
+    color: #666;
+  }
+  
+  .loading-icon {
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-radius: 50%;
+    border-top-color: #fff;
+    animation: spin 1s ease-in-out infinite;
+    margin-right: 8px;
+  }
+  
+  .download-pdf-button {
+    background-color: #34a853;
+    color: white;
+  }
+  
+  .pdf-ready {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+    max-width: 400px;
+  }
+  
+  .pdf-error-message {
+    padding: 1rem;
+    margin-bottom: 1.5rem;
+    background-color: #ffebee;
+    color: #d32f2f;
+    border-radius: 4px;
+    text-align: center;
+    border-left: 4px solid #d32f2f;
+  }
+  
+  .generating-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.7);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+  }
+  
+  .generating-content {
+    background-color: white;
+    padding: 2rem;
+    border-radius: 8px;
+    text-align: center;
+    max-width: 90%;
+    width: 400px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  }
+  
+  .progress-container {
+    height: 20px;
+    width: 100%;
+    background-color: #e0e0e0;
+    border-radius: 10px;
+    margin-bottom: 1rem;
+    overflow: hidden;
+  }
+  
+  .progress-bar {
+    height: 100%;
+    background-color: #4285f4;
+    border-radius: 10px;
+    transition: width 0.3s ease;
+  }
+  
+  .contract-preview-container {
+    position: relative;
+    min-height: 500px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    background-color: white;
+    overflow: hidden;
+  }
+  
+  .preview-loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 400px;
+    background-color: #f8f9fa;
+    text-align: center;
+  }
+  
+  .loading-spinner {
+    width: 40px;
+    height: 40px;
+    border: 3px solid rgba(66, 133, 244, 0.2);
+    border-top: 3px solid #4285f4;
+    border-radius: 50%;
+    margin-bottom: 1rem;
+    animation: spin 1s linear infinite;
+  }
+  
+  /* Critical styling for contract preview */
+  .contract-preview {
+    width: 100%;
+    min-height: 500px;
+    max-height: 700px;
+    padding: 2rem;
+    background-color: white;
+    font-family: 'Times New Roman', Times, serif;
+    font-size: 14px;
+    line-height: 1.5;
+    color: #000;
+    overflow-y: auto;
+    display: block !important;
+  }
+  
+  /* Make sure contract elements display properly */
+  .contract-preview .header,
+  .contract-preview .section,
+  .contract-preview .section-title,
+  .contract-preview .signature-block {
+    display: block;
+  }
+  
+  .contract-preview .header {
+    text-align: center;
+    font-size: 16pt;
+    font-weight: bold;
+    margin-bottom: 1.5em;
+  }
+  
+  .contract-preview .section {
+    margin-top: 1.5em;
+  }
+  
+  .contract-preview .section-title {
+    font-weight: bold;
+    margin-bottom: 0.5em;
+  }
+  
+  .contract-preview .signature-block {
+    margin-top: 3em;
+  }
+  
+  .empty-preview {
+    display: flex;
+    height: 200px;
+    align-items: center;
+    justify-content: center;
+    color: #666;
+    font-style: italic;
+    text-align: center;
   }
   
   @keyframes spin {
