@@ -59,14 +59,31 @@ export const getDocument = async (id) => {
   }
 };
 
+// Updated upload document function using fetch instead of axios
 export const uploadDocument = async (formData) => {
   try {
-    const response = await api.post('/documents', formData, {
+    const token = localStorage.getItem('token');
+    
+    console.log('Attempting document upload with fetch API...');
+    
+    // Use the Fetch API directly for more control
+    const response = await fetch('http://localhost:5000/api/documents', {
+      method: 'POST',
       headers: {
-        'Content-Type': 'multipart/form-data'
-      }
+        'Authorization': `Bearer ${token}`
+        // Don't set Content-Type with FormData, browser will set it with boundary
+      },
+      credentials: 'include',
+      body: formData
     });
-    return response.data;
+    
+    if (!response.ok) {
+      throw new Error(`Upload failed with status: ${response.status}`);
+    }
+    
+    const result = await response.json();
+    console.log('Upload successful:', result);
+    return result;
   } catch (error) {
     console.error('Error uploading document:', error);
     throw error;

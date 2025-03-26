@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, make_response
 from flask_cors import CORS
 from flask_jwt_extended import JWTManager, get_jwt_identity
 import os
@@ -10,22 +10,32 @@ def create_app():
     app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev-key-for-development')
     app.config['JWT_SECRET_KEY'] = os.environ.get('JWT_SECRET_KEY', 'jwt-dev-key')
     
-    # Enhanced CORS configuration for file uploads
-    CORS(app, 
-         resources={r"/api/*": {"origins": ["http://localhost:3000"]}},
-         supports_credentials=True,
-         allow_headers=["Content-Type", "Authorization", "X-Requested-With"],
-         methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-         expose_headers=["Content-Length", "Content-Type"])
-    
     # Configure JWT
     app.config['JWT_TOKEN_LOCATION'] = ['headers']
     app.config['JWT_HEADER_NAME'] = 'Authorization'
     app.config['JWT_HEADER_TYPE'] = 'Bearer'
     app.config['JWT_ACCESS_TOKEN_EXPIRES'] = 60 * 60 * 24 * 7  # 7 days
+    app.config['JWT_EXEMPT_METHODS'] = ['OPTIONS']  # Exempt OPTIONS from JWT
     
     # Initialize JWT
     jwt = JWTManager(app)
+    
+    # Add global before_request handler to handle preflight requests
+    @app.before_request
+    def handle_preflight():
+        if request.method == 'OPTIONS':
+            response = make_response()
+            response.headers.add('Access-Control-Allow-Origin', 'http://localhost:3000')
+            response.headers.add('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With')
+            response.headers.add('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
+            response.headers.add('Access-Control-Allow-Credentials', 'true')
+            response.headers.add('Access-Control-Max-Age', '86400')
+            return response
+    
+    # Configure CORS after JWT
+    CORS(app, 
+         resources={r"/api/*": {"origins": "http://localhost:3000"}},
+         supports_credentials=True)
     
     # Add JWT error handlers for better debugging
     @jwt.invalid_token_loader
@@ -65,11 +75,8 @@ def create_app():
     def test_route():
         return jsonify({"message": "API is working"}), 200
     
-    
-    
     return app
 
 if __name__ == '__main__':
     app = create_app()
-    app.run(debug=True)
     app.run(debug=True, host='0.0.0.0', port=5000)

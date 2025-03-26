@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import api from '../services/api'; // Update this import
 import DocumentSelector from '../Components/DocumentSelector';
 import ComparisonView from '../Components/ComparisonView';
 import './DocumentComparison.css';
@@ -11,6 +10,38 @@ function DocumentComparison() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const navigate = useNavigate();
+  
+  // Verify authentication on component mount
+  useEffect(() => {
+    const checkAuth = async () => {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        navigate('/login');
+        return;
+      }
+      
+      try {
+        // Verify the token is valid
+        const response = await fetch('/api/auth/verify', {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+        
+        if (!response.ok) {
+          console.error('Auth verification failed');
+          localStorage.removeItem('token');
+          navigate('/login');
+        }
+      } catch (error) {
+        console.error('Auth check failed:', error);
+        navigate('/login');
+      }
+    };
+    
+    checkAuth();
+  }, [navigate]);
 
   const handleDocumentSelect = (docIds) => {
     setSelectedDocs(docIds);
@@ -30,14 +61,44 @@ function DocumentComparison() {
       setLoading(true);
       setError(null);
       
-      const response = await api.post('/documents/compare', {
-        documentIds: selectedDocs
+      const token = localStorage.getItem('token');
+      if (!token) {
+        navigate('/login');
+        return;
+      }
+      
+      // Direct fetch approach that bypasses axios and any potential middleware issues
+      const response = await fetch('http://localhost:5000/api/documents/compare', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          documentIds: selectedDocs
+        }),
+        credentials: 'include'  // Important for CORS with credentials
       });
-
-      setComparisonResult(response.data);
+      
+      if (response.status === 401) {
+        console.error('Authentication failed for comparison');
+        localStorage.removeItem('token');
+        navigate('/login');
+        return;
+      }
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: `HTTP error: ${response.status}` }));
+        throw new Error(errorData.error || 'Failed to compare documents');
+      }
+      
+      const data = await response.json();
+      console.log('Comparison result:', data);
+      
+      setComparisonResult(data);
     } catch (err) {
       console.error('Comparison error:', err);
-      setError(err.response?.data?.message || 'Failed to compare documents');
+      setError(err.message || 'Failed to compare documents');
     } finally {
       setLoading(false);
     }

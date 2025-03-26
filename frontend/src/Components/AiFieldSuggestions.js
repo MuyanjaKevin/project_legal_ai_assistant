@@ -107,9 +107,11 @@ const AiFieldSuggestions = ({
               <div 
                 key={fieldId}
                 className={`suggestion-item ${expandedField === fieldId ? 'expanded' : ''}`}
-                onClick={() => toggleField(fieldId)}
               >
-                <div className="suggestion-header">
+                <div 
+                  className="suggestion-header"
+                  onClick={() => toggleField(fieldId)}
+                >
                   <div className="suggestion-field">{fieldLabel}</div>
                   <div className="suggestion-actions">
                     <button 

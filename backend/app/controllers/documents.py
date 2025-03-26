@@ -1,5 +1,6 @@
-from flask import Blueprint, request, jsonify, current_app
+from flask import Blueprint, request, jsonify, current_app, make_response
 from flask_jwt_extended import jwt_required, get_jwt_identity
+from flask_cors import cross_origin
 from werkzeug.utils import secure_filename
 import os
 from app.config.database import get_database
@@ -222,39 +223,67 @@ def delete_document(document_id):
     except Exception as e:
         return jsonify({"message": f"Error deleting document: {str(e)}"}), 500
 
-# Add OPTIONS routes to handle CORS preflight requests
+# Updated OPTIONS routes with proper CORS headers
 @documents_bp.route('/', methods=['OPTIONS'])
+@cross_origin()
 def options_documents():
-    # Just handle OPTIONS preflight request
-    return {}, 200
+    response = make_response()
+    response.headers.add('Access-Control-Allow-Origin', 'http://localhost:3000')
+    response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization')
+    response.headers.add('Access-Control-Allow-Methods', 'POST,GET,OPTIONS')
+    response.headers.add('Access-Control-Allow-Credentials', 'true')
+    return response
 
 @documents_bp.route('/categories', methods=['OPTIONS'])
+@cross_origin()
 def options_categories():
-    # Handle OPTIONS for categories route
-    return {}, 200
+    response = make_response()
+    response.headers.add('Access-Control-Allow-Origin', 'http://localhost:3000')
+    response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization')
+    response.headers.add('Access-Control-Allow-Methods', 'GET,OPTIONS')
+    response.headers.add('Access-Control-Allow-Credentials', 'true')
+    return response
 
 @documents_bp.route('/<document_id>', methods=['OPTIONS'])
+@cross_origin()
 def options_document_detail():
-    # Handle OPTIONS for document detail routes
-    return {}, 200
+    response = make_response()
+    response.headers.add('Access-Control-Allow-Origin', 'http://localhost:3000')
+    response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization')
+    response.headers.add('Access-Control-Allow-Methods', 'GET,DELETE,OPTIONS')
+    response.headers.add('Access-Control-Allow-Credentials', 'true')
+    return response
 
 @documents_bp.route('/<document_id>/summarize', methods=['OPTIONS'])
+@cross_origin()
 def options_document_summarize():
-    # Handle OPTIONS for summarize route
-    return {}, 200
+    response = make_response()
+    response.headers.add('Access-Control-Allow-Origin', 'http://localhost:3000')
+    response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization')
+    response.headers.add('Access-Control-Allow-Methods', 'POST,OPTIONS')
+    response.headers.add('Access-Control-Allow-Credentials', 'true')
+    return response
 
 @documents_bp.route('/<document_id>/extract-info', methods=['OPTIONS'])
+@cross_origin()
 def options_document_extract_info():
-    # Handle OPTIONS for extract-info route
-    return {}, 200
+    response = make_response()
+    response.headers.add('Access-Control-Allow-Origin', 'http://localhost:3000')
+    response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization')
+    response.headers.add('Access-Control-Allow-Methods', 'POST,OPTIONS')
+    response.headers.add('Access-Control-Allow-Credentials', 'true')
+    return response
 
 @documents_bp.route('/compare', methods=['OPTIONS'])
+@cross_origin()
 def options_document_compare():
-    # Handle OPTIONS for compare route
-    response = jsonify({})
-    response.headers.add('Access-Control-Allow-Methods', 'POST, OPTIONS')
-    response.headers.add('Access-Control-Allow-Headers', 'Content-Type, Authorization')
-    return response, 200
+    response = make_response()
+    response.headers.add('Access-Control-Allow-Origin', 'http://localhost:3000')
+    response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization')
+    response.headers.add('Access-Control-Allow-Methods', 'POST,OPTIONS')
+    response.headers.add('Access-Control-Allow-Credentials', 'true')
+    response.headers.add('Access-Control-Max-Age', '86400')  # 24 hours
+    return response
 
 @documents_bp.route('/<document_id>', methods=['GET'])
 @jwt_required()
@@ -316,49 +345,69 @@ def suggest_document_category(document_id):
         return jsonify({"message": f"Error suggesting category: {str(e)}"}), 500
 
 @documents_bp.route('/<document_id>/suggest-category', methods=['OPTIONS'])
+@cross_origin()
 def options_document_suggest_category():
-    # Handle OPTIONS for suggest-category route
-    return {}, 200
+    response = make_response()
+    response.headers.add('Access-Control-Allow-Origin', 'http://localhost:3000')
+    response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization')
+    response.headers.add('Access-Control-Allow-Methods', 'POST,OPTIONS')
+    response.headers.add('Access-Control-Allow-Credentials', 'true')
+    return response
 
+# UPDATED: Enhanced document comparison route with better authentication and error handling
 @documents_bp.route('/compare', methods=['POST'])
 @jwt_required()
 def compare_documents():
     try:
+        # Log authentication info for debugging
+        user_id = get_jwt_identity()
+        print(f"Compare documents request from user_id: {user_id}")
+        
+        # Get request data
         data = request.get_json()
         doc_ids = data.get('documentIds', [])
         
+        print(f"Comparing document IDs: {doc_ids}")
+            
         if len(doc_ids) < 2:
             return jsonify({
                 'error': 'At least two documents required for comparison'
             }), 400
             
-        # Debug log
-        print(f"Comparing document IDs: {doc_ids}")
-            
-        # Fetch documents from MongoDB and handle content field
+        # Fetch documents from MongoDB and verify ownership
         documents = []
         for doc_id in doc_ids:
-            doc = db.documents.find_one({"_id": ObjectId(doc_id)})
-            
-            # Debug log
-            print(f"Document {doc_id} found: {doc is not None}")
-            if doc:
-                print(f"Document {doc_id} has extracted_text: {'extracted_text' in doc}")
-            
-            if not doc:
+            try:
+                # Ensure document ID is valid
+                object_id = ObjectId(doc_id)
+                # Find document and verify it belongs to the user
+                doc = db.documents.find_one({"_id": object_id, "user_id": user_id})
+                
+                print(f"Document {doc_id} found: {doc is not None}")
+                
+                if not doc:
+                    return jsonify({
+                        'error': f'Document with ID {doc_id} not found or access denied'
+                    }), 404
+                    
+                if 'extracted_text' not in doc:
+                    print(f"Document {doc_id} missing extracted_text")
+                    return jsonify({
+                        'error': f'Document {doc_id} has no content or has not been processed yet'
+                    }), 400
+                    
+                documents.append(doc)
+            except Exception as doc_error:
+                print(f"Error processing document {doc_id}: {str(doc_error)}")
                 return jsonify({
-                    'error': f'Document with ID {doc_id} not found'
-                }), 404
-            if 'extracted_text' not in doc:  # Change from text_content to extracted_text
-                return jsonify({
-                    'error': f'Document {doc_id} has no content or has not been processed yet'
+                    'error': f'Invalid document ID: {doc_id}'
                 }), 400
-            documents.append(doc)
         
-        # Compare documents using extracted_text field
+        # Compare documents
+        print("Comparing document contents...")
         comparison_result = comparison_service.compare_documents(
-            documents[0].get('extracted_text', ''),  # Change to extracted_text
-            documents[1].get('extracted_text', '')   # Change to extracted_text
+            documents[0].get('extracted_text', ''),
+            documents[1].get('extracted_text', '')
         )
         
         # Update comparison metadata
@@ -373,13 +422,14 @@ def compare_documents():
                 }
             )
         
+        print("Comparison completed successfully")
         return jsonify({
             'success': True,
             'comparison': comparison_result
         })
         
     except Exception as e:
-        print(f"Comparison error: {str(e)}")  # Debug logging
+        print(f"Comparison error: {str(e)}")
         return jsonify({
             'error': str(e)
         }), 500

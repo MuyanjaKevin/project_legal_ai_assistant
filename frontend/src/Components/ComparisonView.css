@@ -1,23 +1,258 @@
-.comparison-view {
+.comparison-result {
   margin-top: 2rem;
+  padding: 1.5rem;
+  background-color: white;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
-.diff-container {
-  background: #f5f5f5;
+.comparison-result h3 {
+  margin-top: 0;
+  margin-bottom: 1rem;
+  color: #1f2937;
+}
+
+.view-controls {
+  display: flex;
+  border-bottom: 1px solid #e5e7eb;
+  margin-bottom: 1.5rem;
+}
+
+.view-tab {
+  background: none;
+  border: none;
+  padding: 0.75rem 1rem;
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: #6b7280;
+  cursor: pointer;
+  position: relative;
+}
+
+.view-tab:hover {
+  color: #4f46e5;
+}
+
+.view-tab.active {
+  color: #4f46e5;
+}
+
+.view-tab.active::after {
+  content: '';
+  position: absolute;
+  bottom: -1px;
+  left: 0;
+  width: 100%;
+  height: 2px;
+  background-color: #4f46e5;
+}
+
+.result-content {
+  padding: 0.5rem;
+}
+
+.summary-view {
   padding: 1rem;
+}
+
+.similarity-score {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  margin-bottom: 1.5rem;
+}
+
+.score-label {
+  font-weight: 500;
+  margin-right: 0.5rem;
+}
+
+.score-value {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #4f46e5;
+  margin-right: 1rem;
+}
+
+.score-bar {
+  flex-grow: 1;
+  height: 0.75rem;
+  background-color: #e5e7eb;
+  border-radius: 999px;
+  overflow: hidden;
+  position: relative;
+}
+
+.score-bar::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: var(--similarity, 0%);
+  height: 100%;
+  background-color: var(--color, #4f46e5);
+  border-radius: 999px;
+}
+
+.changes-summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.change-stat {
+  background-color: #f9fafb;
+  padding: 1rem;
+  border-radius: 6px;
+}
+
+.stat-label {
+  font-weight: 500;
+  margin-bottom: 0.5rem;
+}
+
+.stat-label.added {
+  color: #22c55e;
+}
+
+.stat-label.removed {
+  color: #ef4444;
+}
+
+.stat-label.modified {
+  color: #f59e0b;
+}
+
+.stat-value {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.summary-interpretation {
+  background-color: #f0f9ff;
+  padding: 1rem;
+  border-radius: 6px;
+  border-left: 4px solid #3b82f6;
+}
+
+.summary-interpretation h4 {
+  margin-top: 0;
+  margin-bottom: 0.5rem;
+  color: #1f2937;
+}
+
+.summary-interpretation p {
+  margin: 0;
+  color: #4b5563;
+  line-height: 1.5;
+}
+
+.diff-view {
+  padding: 1rem;
+}
+
+.diff-legend {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 1rem;
+  padding: 0.75rem;
+  background-color: #f9fafb;
+  border-radius: 6px;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  font-size: 0.875rem;
+  color: #4b5563;
+}
+
+.added-marker, .removed-marker, .modified-marker {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
   border-radius: 4px;
+  margin-right: 0.35rem;
+  font-weight: bold;
+}
+
+.added-marker {
+  background-color: #dcfce7;
+  color: #22c55e;
+}
+
+.removed-marker {
+  background-color: #fee2e2;
+  color: #ef4444;
+}
+
+.modified-marker {
+  background-color: #fef3c7;
+  color: #f59e0b;
+}
+
+.diff-content {
+  font-family: monospace;
+  background-color: #f8fafc;
+  padding: 1rem;
+  border-radius: 6px;
   max-height: 400px;
   overflow-y: auto;
+  white-space: pre-wrap;
+  word-break: break-all;
 }
 
 .diff-line {
-  white-space: pre-wrap;
+  padding: 0.125rem 0;
+  line-height: 1.5;
 }
 
-.diff-line-added {
-  background-color: #e6ffe6;
+.added-line {
+  display: block;
+  background-color: #dcfce7;
+  color: #166534;
 }
 
-.diff-line-removed {
-  background-color: #ffe6e6;
+.removed-line {
+  display: block;
+  background-color: #fee2e2;
+  color: #991b1b;
+}
+
+.modified-line {
+  display: block;
+  background-color: #fef3c7;
+  color: #92400e;
+}
+
+.unchanged-line {
+  display: block;
+  color: #1f2937;
+}
+
+.raw-view {
+  background-color: #f8fafc;
+  padding: 1rem;
+  border-radius: 6px;
+  overflow-x: auto;
+}
+
+.raw-view pre {
+  margin: 0;
+  font-family: monospace;
+  font-size: 0.875rem;
+  line-height: 1.6;
+  color: #1f2937;
+}
+
+.no-results {
+  padding: 2rem;
+  text-align: center;
+  color: #6b7280;
+  background-color: #f9fafb;
+  border-radius: 6px;
 }

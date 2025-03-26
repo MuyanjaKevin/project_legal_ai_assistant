@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { uploadDocument, suggestDocumentCategory } from '../services/api';
+import { suggestDocumentCategory } from '../services/api';
 
 const DocumentUpload = () => {
   const [file, setFile] = useState(null);
@@ -53,6 +53,33 @@ const DocumentUpload = () => {
     setCategory(e.target.value);
   };
 
+  // Direct upload using fetch API to avoid CORS issues
+  const uploadDocumentDirect = async (formData) => {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      throw new Error('Authentication required');
+    }
+    
+    console.log('Attempting document upload with direct fetch...');
+    
+    const response = await fetch('http://localhost:5000/api/documents', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`
+        // Don't set Content-Type with FormData - browser will set it with proper boundary
+      },
+      credentials: 'include',
+      body: formData
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || `Upload failed with status: ${response.status}`);
+    }
+    
+    return await response.json();
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     
@@ -70,8 +97,8 @@ const DocumentUpload = () => {
     formData.append('category', category);
     
     try {
-      // Upload document
-      const response = await uploadDocument(formData);
+      // Upload document using direct fetch
+      const response = await uploadDocumentDirect(formData);
       
       // If auto-categorization is enabled, suggest category
       if (useAutoCategory && response.document_id) {
