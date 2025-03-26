@@ -2,6 +2,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { deleteDocument } from '../services/api';
+import '../styles/Dashboard.css';
 
 const Dashboard = () => {
   const [documents, setDocuments] = useState([]);
@@ -123,9 +124,23 @@ const Dashboard = () => {
     }
   };
 
+  const getDocumentIcon = (fileType) => {
+    switch(fileType?.toLowerCase()) {
+      case 'pdf':
+        return <div className="doc-icon pdf-icon">PDF</div>;
+      case 'docx':
+        return <div className="doc-icon docx-icon">DOCX</div>;
+      case 'txt':
+        return <div className="doc-icon txt-icon">TXT</div>;
+      default:
+        return <div className="doc-icon">DOC</div>;
+    }
+  };
+
   if (loading) {
     return (
-      <div className="loading-container" style={{ textAlign: 'center', padding: '50px' }}>
+      <div className="loading-container">
+        <div className="loader"></div>
         <h2>Loading your documents...</h2>
         <p>Please wait while we retrieve your documents.</p>
       </div>
@@ -134,17 +149,17 @@ const Dashboard = () => {
 
   if (error) {
     return (
-      <div className="error-container" style={{ textAlign: 'center', padding: '50px' }}>
+      <div className="error-container">
+        <div className="error-icon">⚠️</div>
         <h2>Error Loading Documents</h2>
         <p>{error}</p>
-        <div style={{ marginTop: '20px' }}>
+        <div className="error-actions">
           <button onClick={() => window.location.reload()} className="retry-button">
             Try Again
           </button>
           <button 
             onClick={handleLogout} 
-            className="logout-button" 
-            style={{ marginLeft: '10px' }}
+            className="logout-button"
           >
             Logout
           </button>
@@ -154,36 +169,61 @@ const Dashboard = () => {
   }
 
   return (
-    <div className="dashboard">
-      <header>
-        <h1>Document Dashboard</h1>
+    <div className="dashboard-container">
+      <div className="dashboard-header">
+        <h2>Document Dashboard</h2>
         <div className="dashboard-actions">
-          <Link to="/upload" className="upload-button">Upload Document</Link>
-          <Link to="/compare" className="compare-button">Compare Documents</Link>
-          <button onClick={handleLogout} className="logout-button">Logout</button>
+          <Link to="/upload" className="action-button upload-button">
+            <span className="button-icon">+</span> Upload Document
+          </Link>
+          <Link to="/compare" className={`action-button compare-button ${documents.length < 2 ? 'disabled' : ''}`}>
+            <span className="button-icon">↔</span> Compare Documents
+          </Link>
         </div>
-      </header>
+      </div>
       
-      <div className="documents-container">
-        <h2>Your Documents</h2>
+      <div className="documents-section">
+        <h3>Your Documents</h3>
         
         {documents.length === 0 ? (
           <div className="empty-state">
-            <p>You don't have any documents yet.</p>
-            <Link to="/upload" className="button">Upload Your First Document</Link>
+            <div className="empty-state-icon">📄</div>
+            <h3>No Documents Yet</h3>
+            <p>Upload documents to analyze, compare, and manage them here.</p>
+            <Link to="/upload" className="action-button upload-button">
+              Upload Your First Document
+            </Link>
           </div>
         ) : (
-          <div className="document-grid">
+          <div className="documents-grid">
             {documents.map(doc => (
               <div key={doc._id} className="document-card">
-                <h3>{doc.name}</h3>
-                <p>Type: {doc.file_type}</p>
-                <p>Uploaded: {new Date(doc.upload_date).toLocaleDateString()}</p>
-                <div className="document-actions">
-                  <Link to={`/documents/${doc._id}`} className="view-link">View & Analyze</Link>
+                <div className="document-card-header">
+                  {getDocumentIcon(doc.file_type)}
+                  <div className="document-title">{doc.name}</div>
+                  {doc.category && (
+                    <div className="document-type-tag">{doc.category}</div>
+                  )}
+                </div>
+                <div className="document-card-content">
+                  <div className="document-info">
+                    <div className="document-meta">
+                      <span className="meta-label">Type:</span>
+                      <span className="meta-value">{doc.file_type}</span>
+                    </div>
+                    <div className="document-meta">
+                      <span className="meta-label">Uploaded:</span>
+                      <span className="meta-value">{new Date(doc.upload_date).toLocaleDateString()}</span>
+                    </div>
+                  </div>
+                </div>
+                <div className="document-card-actions">
+                  <Link to={`/documents/${doc._id}`} className="card-action-button view-button">
+                    View & Analyze
+                  </Link>
                   <button 
                     onClick={(e) => handleDeleteClick(e, doc._id)}
-                    className="delete-link"
+                    className="card-action-button delete-button"
                   >
                     Delete
                   </button>

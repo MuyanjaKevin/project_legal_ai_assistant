@@ -1,35 +1,92 @@
 // src/components/Navigation.js
-import React from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { Link, useLocation } from 'react-router-dom';
 import '../styles/Navigation.css';
 
 const Navigation = ({ isAuthenticated, onLogout }) => {
-  const navigate = useNavigate();
+  const [menuOpen, setMenuOpen] = useState(false);
+  const location = useLocation();
+  
+  // Close mobile menu when route changes
+  useEffect(() => {
+    setMenuOpen(false);
+  }, [location]);
+  
+  // Handle window resize to properly handle menu state
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth > 768 && menuOpen) {
+        setMenuOpen(false);
+      }
+    };
+    
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, [menuOpen]);
+  
+  // Check if a link is active
+  const isActive = (path) => {
+    if (path === '/') {
+      return location.pathname === '/' || location.pathname === '/dashboard';
+    }
+    return location.pathname.startsWith(path);
+  };
 
   return (
-    <nav className="main-nav">
-      <div className="container">
-        <div className="nav-content">
-          <div className="nav-logo">
-            <Link to="/">Legal AI Assistant</Link>
-          </div>
+    <nav className="navigation">
+      <div className="nav-container">
+        <div className="nav-brand">
+          <Link to="/" className="brand-link">
+            <span className="brand-name">Legal AI Assistant</span>
+          </Link>
           
-          <div className="nav-links">
-            {isAuthenticated ? (
-              <>
-                <Link to="/dashboard">Dashboard</Link>
-                <Link to="/upload">Upload Document</Link>
-                <Link to="/compare">Compare Documents</Link>
-                <Link to="/contracts">Generate Contracts</Link>
-                <button className="nav-button" onClick={onLogout}>Logout</button>
-              </>
-            ) : (
-              <>
-                <Link to="/login">Login</Link>
-                <Link to="/register">Register</Link>
-              </>
-            )}
-          </div>
+          <button 
+            className={`mobile-menu-toggle ${menuOpen ? 'active' : ''}`}
+            onClick={() => setMenuOpen(!menuOpen)}
+            aria-label="Toggle navigation menu"
+          >
+            <span className="toggle-bar"></span>
+            <span className="toggle-bar"></span>
+            <span className="toggle-bar"></span>
+          </button>
+        </div>
+        
+        <div className={`nav-menu ${menuOpen ? 'open' : ''}`}>
+          {isAuthenticated ? (
+            <>
+              <div className="nav-links">
+                <Link 
+                  to="/dashboard" 
+                  className={`nav-link ${isActive('/dashboard') ? 'active' : ''}`}
+                >
+                  Dashboard
+                </Link>
+                
+                {/* Remove duplicate upload and compare links from nav */}
+                
+                <Link 
+                  to="/contracts" 
+                  className={`nav-link ${isActive('/contracts') ? 'active' : ''}`}
+                >
+                  Generate Contracts
+                </Link>
+              </div>
+              
+              <div className="nav-auth">
+                <button 
+                  className="logout-button"
+                  onClick={onLogout}
+                >
+                  Logout
+                </button>
+              </div>
+            </>
+          ) : (
+            <div className="nav-auth">
+              <Link to="/login" className="login-link">Login</Link>
+              <Link to="/register" className="register-link">Register</Link>
+            </div>
+          )}
         </div>
       </div>
     </nav>
