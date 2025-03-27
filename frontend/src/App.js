@@ -9,6 +9,7 @@ import LandingPage from './pages/LandingPage';
 import DocumentComparison from './pages/DocumentComparison';
 import ContractGenerator from './pages/ContractGenerator';
 import EnhancedContractGenerator from './pages/EnhancedContractGenerator';
+import SearchPage from './pages/SearchPage'; // Add import for SearchPage
 import Navigation from './Components/Navigation';
 import ProtectedRoute from './Components/ProtectedRoute';
 import './styles/theme.css';
@@ -105,6 +106,16 @@ function App() {
             path="/compare" 
             element={
               isAuthenticated ? <DocumentComparison /> : <Navigate to="/login" />
+            } 
+          />
+          
+          {/* New search route */}
+          <Route 
+            path="/search" 
+            element={
+              <ProtectedRoute>
+                <SearchPage />
+              </ProtectedRoute>
             } 
           />
           

@@ -1,3 +1,5 @@
+# Modify backend/app.py to include the new search controller
+
 from flask import Flask, request, jsonify, make_response
 from flask_cors import CORS
 from flask_jwt_extended import JWTManager, get_jwt_identity
@@ -65,10 +67,16 @@ def create_app():
     from app.controllers.auth import auth_bp
     from app.controllers.documents import documents_bp
     from app.controllers.contracts import contracts_bp
+    from app.controllers.search import search_bp, setup_search_indexes  # Import the new search controller
     
     app.register_blueprint(auth_bp, url_prefix='/api/auth')
     app.register_blueprint(documents_bp, url_prefix='/api/documents')
     app.register_blueprint(contracts_bp, url_prefix='/api/contracts')
+    app.register_blueprint(search_bp)  # The search blueprint already has /api/search prefix in its routes
+    
+    # Set up MongoDB indexes for search on application startup
+    with app.app_context():
+        setup_search_indexes()
     
     # Add a simple test route
     @app.route('/api/test', methods=['GET'])
