@@ -9,9 +9,11 @@ import LandingPage from './pages/LandingPage';
 import DocumentComparison from './pages/DocumentComparison';
 import ContractGenerator from './pages/ContractGenerator';
 import EnhancedContractGenerator from './pages/EnhancedContractGenerator';
-import SearchPage from './pages/SearchPage'; // Add import for SearchPage
+import SearchPage from './pages/SearchPage';
+import UserSettings from './pages/UserSettings';
 import Navigation from './Components/Navigation';
 import ProtectedRoute from './Components/ProtectedRoute';
+import { ThemeProvider } from './context/ThemeContext';
 import './styles/theme.css';
 import './App.css';
 
@@ -64,86 +66,98 @@ function App() {
   }
 
   return (
-    <Router>
-      <div className="App">
-        <Navigation isAuthenticated={isAuthenticated} onLogout={handleLogout} />
-        <Routes>
-          {/* Public routes */}
-          <Route path="/" element={isAuthenticated ? <Dashboard /> : <LandingPage />} />
-          <Route 
-            path="/login" 
-            element={!isAuthenticated ? <Login setIsAuthenticated={setIsAuthenticated} /> : <Navigate to="/" />} 
-          />
-          <Route 
-            path="/register" 
-            element={isAuthenticated ? <Navigate to="/" /> : <Register />} 
-          />
-          
-          {/* Protected routes - individual route protection approach */}
-          <Route 
-            path="/dashboard" 
-            element={
-              <ProtectedRoute>
-                <Dashboard />
-              </ProtectedRoute>
-            } 
-          />
-          <Route 
-            path="/documents/:id" 
-            element={
-              <ProtectedRoute>
-                <DocumentView />
-              </ProtectedRoute>
-            } 
-          />
-          <Route 
-            path="/upload" 
-            element={
-              isAuthenticated ? <DocumentUpload /> : <Navigate to="/login" />
-            } 
-          />
-          <Route 
-            path="/compare" 
-            element={
-              isAuthenticated ? <DocumentComparison /> : <Navigate to="/login" />
-            } 
-          />
-          
-          {/* New search route */}
-          <Route 
-            path="/search" 
-            element={
-              <ProtectedRoute>
-                <SearchPage />
-              </ProtectedRoute>
-            } 
-          />
-          
-          {/* Contract generation routes */}
-          <Route 
-            path="/contracts" 
-            element={
-              <ProtectedRoute>
-                <EnhancedContractGenerator />
-              </ProtectedRoute>
-            } 
-          />
-          
-          {/* Keep the original route accessible at /contracts/basic for backward compatibility */}
-          <Route 
-            path="/contracts/basic" 
-            element={
-              <ProtectedRoute>
-                <ContractGenerator />
-              </ProtectedRoute>
-            } 
-          />
-          
-          {/* Fallback route */}
-          <Route path="*" element={<Navigate to="/" />} />
-        </Routes>
-      </div>
-    </Router>
+    <ThemeProvider>
+      <Router>
+        <div className="App">
+          <Navigation isAuthenticated={isAuthenticated} onLogout={handleLogout} />
+          <Routes>
+            {/* Public routes */}
+            <Route path="/" element={isAuthenticated ? <Dashboard /> : <LandingPage />} />
+            <Route 
+              path="/login" 
+              element={!isAuthenticated ? <Login setIsAuthenticated={setIsAuthenticated} /> : <Navigate to="/" />} 
+            />
+            <Route 
+              path="/register" 
+              element={isAuthenticated ? <Navigate to="/" /> : <Register />} 
+            />
+            
+            {/* Protected routes - individual route protection approach */}
+            <Route 
+              path="/dashboard" 
+              element={
+                <ProtectedRoute>
+                  <Dashboard />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/documents/:id" 
+              element={
+                <ProtectedRoute>
+                  <DocumentView />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/upload" 
+              element={
+                isAuthenticated ? <DocumentUpload /> : <Navigate to="/login" />
+              } 
+            />
+            <Route 
+              path="/compare" 
+              element={
+                isAuthenticated ? <DocumentComparison /> : <Navigate to="/login" />
+              } 
+            />
+            
+            {/* New search route */}
+            <Route 
+              path="/search" 
+              element={
+                <ProtectedRoute>
+                  <SearchPage />
+                </ProtectedRoute>
+              } 
+            />
+            
+            {/* Settings route */}
+            <Route 
+              path="/settings" 
+              element={
+                <ProtectedRoute>
+                  <UserSettings />
+                </ProtectedRoute>
+              } 
+            />
+            
+            {/* Contract generation routes */}
+            <Route 
+              path="/contracts" 
+              element={
+                <ProtectedRoute>
+                  <EnhancedContractGenerator />
+                </ProtectedRoute>
+              } 
+            />
+            
+            {/* Keep the original route accessible at /contracts/basic for backward compatibility */}
+            <Route 
+              path="/contracts/basic" 
+              element={
+                <ProtectedRoute>
+                  <ContractGenerator />
+                </ProtectedRoute>
+              } 
+            />
+            
+            {/* Fallback route */}
+            <Route path="*" element={<Navigate to="/" />} />
+          </Routes>
+        </div>
+      </Router>
+    </ThemeProvider>
   );
 }
 

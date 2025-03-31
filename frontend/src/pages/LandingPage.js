@@ -14,7 +14,7 @@ const LandingPage = () => {
           </p>
           <div className="hero-cta">
             <Link to="/register" className="button button-primary">Get Started</Link>
-            <Link to="/login" className="button button-secondary">Login</Link>
+            <Link to="/login" className="button button-secondary">Existing User? Sign In</Link>
           </div>
         </div>
       </header>

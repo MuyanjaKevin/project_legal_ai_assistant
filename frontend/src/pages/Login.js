@@ -1,7 +1,7 @@
 // src/pages/Login.js
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import api from '../services/api'; // Add this import
+import api from '../services/api';
 
 const Login = ({ setIsAuthenticated }) => {
   const [formData, setFormData] = useState({
@@ -10,13 +10,12 @@ const Login = ({ setIsAuthenticated }) => {
   });
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [debugLog, setDebugLog] = useState([]);
   const navigate = useNavigate();
-
+  
   // Clear any existing token when the login page loads
   useEffect(() => {
     localStorage.removeItem('token');
-    addDebugMessage('Token cleared from localStorage on login page load');
+    // Debug message removed
   }, []);
 
   const handleChange = (e) => {
@@ -26,13 +25,15 @@ const Login = ({ setIsAuthenticated }) => {
     });
   };
 
+  // We'll keep this function but not display the messages
   const addDebugMessage = (message) => {
-    console.log(message);
-    setDebugLog(prev => [...prev, message]);
+    console.log(message); // Still log to console for your debugging
+    // But don't add to state anymore
   };
 
   const handleLogin = async (e) => {
     e.preventDefault();
+    setLoading(true);
     try {
       const response = await api.login({
         email: formData.email,
@@ -45,6 +46,8 @@ const Login = ({ setIsAuthenticated }) => {
       navigate('/');
     } catch (error) {
       setError(error.response?.data?.message || 'Login failed');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -103,16 +106,7 @@ const Login = ({ setIsAuthenticated }) => {
             <Link to="/">Back to Home</Link>
           </p>
           
-          {debugLog.length > 0 && (
-            <div className="debug-log" style={{ backgroundColor: '#f5f5f5', padding: '10px', marginTop: '20px', borderRadius: '4px', fontSize: '12px' }}>
-              <strong>Debug Log:</strong>
-              <ul style={{ margin: '5px 0', paddingLeft: '20px' }}>
-                {debugLog.map((msg, index) => (
-                  <li key={index}>{msg}</li>
-                ))}
-              </ul>
-            </div>
-          )}
+          {/* Debug log section removed */}
         </div>
       </div>
     </div>

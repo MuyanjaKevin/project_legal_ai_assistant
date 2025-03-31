@@ -16,6 +16,7 @@ import LogoutIcon from '@mui/icons-material/Logout';
 import LoginIcon from '@mui/icons-material/Login';
 import PersonAddIcon from '@mui/icons-material/PersonAdd';
 import HomeIcon from '@mui/icons-material/Home';
+import SettingsIcon from '@mui/icons-material/Settings';
 import QuickSearch from './QuickSearch';
 import '../styles/Navigation.css';
 
@@ -40,6 +41,9 @@ const Navigation = ({ isAuthenticated, onLogout }) => {
   const isDashboardActive = () => {
     return isActive('/dashboard') || isActive('/');
   };
+
+  // Check if we're on the landing page
+  const isLandingPage = location.pathname === '/' && !isAuthenticated;
   
   // Navigation items with icons for authenticated users
   const authenticatedNavItems = [
@@ -47,15 +51,19 @@ const Navigation = ({ isAuthenticated, onLogout }) => {
     { label: 'Search', path: '/search', icon: <SearchIcon />, active: isActive('/search') },
     { label: 'Contracts', path: '/contracts', icon: <DescriptionIcon />, active: isActive('/contracts') },
     { label: 'Upload', path: '/upload', icon: <UploadFileIcon />, active: isActive('/upload') },
-    { label: 'Compare', path: '/compare', icon: <CompareIcon />, active: isActive('/compare') }
+    { label: 'Compare', path: '/compare', icon: <CompareIcon />, active: isActive('/compare') },
+    { label: 'Settings', path: '/settings', icon: <SettingsIcon />, active: isActive('/settings') }
   ];
   
   // Navigation items for unauthenticated users
-  const unauthenticatedNavItems = [
-    { label: 'Home', path: '/', icon: <HomeIcon />, active: isActive('/') },
-    { label: 'Login', path: '/login', icon: <LoginIcon />, active: isActive('/login') },
-    { label: 'Register', path: '/register', icon: <PersonAddIcon />, active: isActive('/register') }
-  ];
+  // For landing page, just show Home
+  const unauthenticatedNavItems = isLandingPage 
+    ? [{ label: 'Home', path: '/', icon: <HomeIcon />, active: isActive('/') }]
+    : [
+        { label: 'Home', path: '/', icon: <HomeIcon />, active: isActive('/') },
+        { label: 'Login', path: '/login', icon: <LoginIcon />, active: isActive('/login') },
+        { label: 'Register', path: '/register', icon: <PersonAddIcon />, active: isActive('/register') }
+      ];
   
   const navItems = isAuthenticated ? authenticatedNavItems : unauthenticatedNavItems;
   
@@ -128,18 +136,21 @@ const Navigation = ({ isAuthenticated, onLogout }) => {
           
           {!isMobile && (
             <Box className="desktop-menu">
-              {navItems.map((item) => (
-                <Button
-                  key={item.label}
-                  color="inherit"
-                  component={RouterLink}
-                  to={item.path}
-                  startIcon={item.icon}
-                  className={item.active ? 'active-nav-button' : ''}
-                >
-                  {item.label}
-                </Button>
-              ))}
+              {/* For unauthenticated users on landing page, don't show nav links */}
+              {!(isLandingPage && !isAuthenticated) && 
+                navItems.map((item) => (
+                  <Button
+                    key={item.label}
+                    color="inherit"
+                    component={RouterLink}
+                    to={item.path}
+                    startIcon={item.icon}
+                    className={item.active ? 'active-nav-button' : ''}
+                  >
+                    {item.label}
+                  </Button>
+                ))
+              }
               
               {isAuthenticated && (
                 <Button 

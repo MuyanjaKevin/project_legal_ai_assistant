@@ -1,9 +1,32 @@
 // src/pages/DocumentView.js
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
+import { 
+  Tabs, Tab, Box, Typography, CircularProgress,
+  Paper, Divider
+} from '@mui/material';
 import { deleteDocument } from '../services/api';
-import '../App.css';
+import RiskAssessment from '../Components/RiskAssessment';
+import DocumentTranslation from '../Components/DocumentTranslation';
 import LoadingSpinner from '../Components/LoadingSpinner';
+import '../App.css';
+
+// Tab Panel helper component
+function TabPanel(props) {
+  const { children, value, index, ...other } = props;
+  
+  return (
+    <div
+      role="tabpanel"
+      hidden={value !== index}
+      id={`document-tabpanel-${index}`}
+      aria-labelledby={`document-tab-${index}`}
+      {...other}
+    >
+      {value === index && <Box sx={{ pt: 2 }}>{children}</Box>}
+    </div>
+  );
+}
 
 const DocumentView = () => {
   const { id } = useParams();
@@ -17,6 +40,7 @@ const DocumentView = () => {
   const [extracting, setExtracting] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [activeTab, setActiveTab] = useState(0); // For tab navigation
 
   useEffect(() => {
     const fetchDocument = async () => {
@@ -128,6 +152,10 @@ const DocumentView = () => {
     } finally {
       setDeleting(false);
     }
+  };
+
+  const handleTabChange = (event, newValue) => {
+    setActiveTab(newValue);
   };
 
   if (loading) {
@@ -306,27 +334,64 @@ const DocumentView = () => {
         </div>
       </div>
 
-      {summary && (
-        <div className="summary-container">
-          <h3>Document Summary</h3>
-          <div className="summary-content">
-            <p>{summary}</p>
-          </div>
-        </div>
-      )}
+      {/* Tab Navigation */}
+      <Paper sx={{ mt: 3 }}>
+        <Tabs value={activeTab} onChange={handleTabChange} variant="fullWidth">
+          <Tab label="Overview" />
+          <Tab label="Content" />
+          <Tab label="Risk Assessment" />
+          <Tab label="Translation" />
+        </Tabs>
+      </Paper>
 
-      {keyInfo && renderKeyInfo()}
-
-      <div className="document-content">
-        <h3>Document Content</h3>
-        {document.extracted_text ? (
-          <div className="text-content">
-            <pre>{document.extracted_text}</pre>
+      {/* Overview Tab */}
+      <TabPanel value={activeTab} index={0}>
+        {summary && (
+          <div className="summary-container">
+            <h3>Document Summary</h3>
+            <div className="summary-content">
+              <p>{summary}</p>
+            </div>
           </div>
-        ) : (
-          <p>No text content available for this document.</p>
         )}
-      </div>
+
+        {keyInfo && renderKeyInfo()}
+        
+        {!summary && !keyInfo && (
+          <div className="no-analysis-container">
+            <Typography variant="body1" sx={{ textAlign: 'center', py: 4 }}>
+              Use the buttons above to analyze this document and extract key information.
+            </Typography>
+          </div>
+        )}
+      </TabPanel>
+
+      {/* Content Tab */}
+      <TabPanel value={activeTab} index={1}>
+        <div className="document-content">
+          <h3>Document Content</h3>
+          {document.extracted_text ? (
+            <div className="text-content">
+              <pre>{document.extracted_text}</pre>
+            </div>
+          ) : (
+            <p>No text content available for this document.</p>
+          )}
+        </div>
+      </TabPanel>
+
+      {/* Risk Assessment Tab */}
+      <TabPanel value={activeTab} index={2}>
+        <RiskAssessment documentId={id} />
+      </TabPanel>
+
+      {/* Translation Tab */}
+      <TabPanel value={activeTab} index={3}>
+        <DocumentTranslation 
+          documentId={id} 
+          documentText={document.extracted_text}
+        />
+      </TabPanel>
 
       <div className="view-controls">
         <button onClick={() => navigate('/')} className="back-button">

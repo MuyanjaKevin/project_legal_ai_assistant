@@ -6,7 +6,7 @@ import {
   CircularProgress, Box, FormControl, MenuItem, Select, 
   InputLabel, FormHelperText, Pagination, Card, CardContent,
   Divider, Chip, Accordion, AccordionSummary, AccordionDetails,
-  Alert, IconButton, Tooltip
+  Alert, IconButton, Tooltip, FormControlLabel, Switch
 } from '@mui/material';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
@@ -15,9 +15,11 @@ import SearchIcon from '@mui/icons-material/Search';
 import FilterListIcon from '@mui/icons-material/FilterList';
 import ClearIcon from '@mui/icons-material/Clear';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import TranslateIcon from '@mui/icons-material/Translate';
 import SavedSearchesPanel from '../Components/Search/SavedSearchesPanel';
 import SearchResultList from '../Components/Search/SearchResultList';
 import { searchDocuments, getCategories } from '../services/search';
+import { translateSearchQuery } from '../services/translation';
 import '../styles/SearchPage.css';
 
 const SearchPage = () => {
@@ -50,6 +52,10 @@ const SearchPage = () => {
   const [filtersExpanded, setFiltersExpanded] = useState(false);
   const [activeFilters, setActiveFilters] = useState(0);
   
+  // New state for cross-language search
+  const [isMultiLanguageSearch, setIsMultiLanguageSearch] = useState(false);
+  const [translateLoading, setTranslateLoading] = useState(false);
+  
   // Parse URL query parameters when component mounts or URL changes
   useEffect(() => {
     const queryParams = new URLSearchParams(location.search);
@@ -62,6 +68,7 @@ const SearchPage = () => {
     if (queryParams.has('file_type')) params.file_type = queryParams.get('file_type');
     if (queryParams.has('status')) params.status = queryParams.get('status');
     if (queryParams.has('page')) params.page = parseInt(queryParams.get('page'), 10);
+    if (queryParams.has('multilang')) params.multilang = queryParams.get('multilang') === 'true';
     
     // Handle tags (which can be multiple)
     const tags = queryParams.getAll('tags');
@@ -70,6 +77,7 @@ const SearchPage = () => {
     }
     
     setSearchParams(params);
+    setIsMultiLanguageSearch(params.multilang || false);
     
     // Count active filters for badge display
     let filterCount = 0;
@@ -79,6 +87,7 @@ const SearchPage = () => {
     if (params.file_type) filterCount++;
     if (params.status) filterCount++;
     if (params.tags && params.tags.length > 0) filterCount += params.tags.length;
+    if (params.multilang) filterCount++;
     setActiveFilters(filterCount);
     
     // If we have any search parameters, execute the search
@@ -117,7 +126,7 @@ const SearchPage = () => {
     fetchFilterOptions();
   }, []);
   
-  // Execute search with current parameters
+  // Enhanced execute search with cross-language support
   const executeSearch = useCallback(async (params = searchParams) => {
     setLoading(true);
     setSuggestion(null);
@@ -144,6 +153,20 @@ const SearchPage = () => {
         delete apiParams.category;
       }
       
+      // If multi-language search is enabled, translate the search query
+      if (isMultiLanguageSearch && apiParams.q && apiParams.q.trim()) {
+        setTranslateLoading(true);
+        try {
+          const translations = await translateSearchQuery(apiParams.q);
+          // Add translations to search params
+          apiParams.translations = translations.translations;
+        } catch (error) {
+          console.error('Error translating query:', error);
+        } finally {
+          setTranslateLoading(false);
+        }
+      }
+      
       const response = await searchDocuments(apiParams);
       
       setResults(response.results || []);
@@ -159,7 +182,7 @@ const SearchPage = () => {
     } finally {
       setLoading(false);
     }
-  }, [searchParams]);
+  }, [searchParams, isMultiLanguageSearch]);
   
   // Handle form submission
   const handleSubmit = (e) => {
@@ -177,6 +200,11 @@ const SearchPage = () => {
       // Reset to page 1 when changing search parameters
       ...(field !== 'page' && { page: 1 })
     }));
+  };
+  
+  // Handle multi-language search toggle
+  const handleMultiLanguageToggle = (e) => {
+    setIsMultiLanguageSearch(e.target.checked);
   };
   
   // Handle tag selection
@@ -207,6 +235,8 @@ const SearchPage = () => {
       tags: [],
       page: 1
     }));
+    
+    setIsMultiLanguageSearch(false);
     
     // Update URL without filters
     const queryParams = new URLSearchParams();
@@ -250,6 +280,9 @@ const SearchPage = () => {
     if (searchParams.status) {
       queryParams.set('status', searchParams.status);
     }
+    
+    // Add multi-language search setting
+    queryParams.set('multilang', isMultiLanguageSearch.toString());
     
     // Add tags (can be multiple)
     if (searchParams.tags && searchParams.tags.length > 0) {
@@ -300,6 +333,9 @@ const SearchPage = () => {
       per_page: params.per_page || 10
     });
     
+    // Set multi-language search if it was saved
+    setIsMultiLanguageSearch(params.multilang || false);
+    
     // Update URL to trigger search
     const queryParams = new URLSearchParams();
     if (params.q) queryParams.set('q', params.q);
@@ -308,6 +344,7 @@ const SearchPage = () => {
     if (params.end_date) queryParams.set('end_date', params.end_date);
     if (params.file_type) queryParams.set('file_type', params.file_type);
     if (params.status) queryParams.set('status', params.status);
+    if (params.multilang) queryParams.set('multilang', params.multilang);
     
     // Add tags (can be multiple)
     if (params.tags && params.tags.length > 0) {
@@ -332,7 +369,7 @@ const SearchPage = () => {
           {/* Saved Searches Panel */}
           <Grid item xs={12} md={3}>
             <SavedSearchesPanel 
-              currentSearch={searchParams} 
+              currentSearch={{...searchParams, multilang: isMultiLanguageSearch}} 
               onLoadSearch={handleLoadSavedSearch} 
             />
           </Grid>
@@ -483,6 +520,28 @@ const SearchPage = () => {
                             </Button>
                           </Grid>
                           
+                          {/* Multi-language Search Option */}
+                          <Grid item xs={12} sm={6} md={6}>
+                            <FormControlLabel
+                              control={
+                                <Switch
+                                  checked={isMultiLanguageSearch}
+                                  onChange={handleMultiLanguageToggle}
+                                  color="primary"
+                                />
+                              }
+                              label={
+                                <Box display="flex" alignItems="center">
+                                  <TranslateIcon fontSize="small" sx={{ mr: 1 }} />
+                                  <Typography>Cross-language search</Typography>
+                                </Box>
+                              }
+                            />
+                            <FormHelperText>
+                              Search for documents in all languages regardless of query language
+                            </FormHelperText>
+                          </Grid>
+                          
                           {/* Tags Section */}
                           <Grid item xs={12}>
                             <Typography variant="subtitle2" gutterBottom>
@@ -520,10 +579,16 @@ const SearchPage = () => {
                       color="primary"
                       size="large"
                       fullWidth
-                      startIcon={<SearchIcon />}
-                      disabled={loading}
+                      startIcon={
+                        loading || translateLoading ? 
+                          <CircularProgress size={24} color="inherit" /> : 
+                          <SearchIcon />
+                      }
+                      disabled={loading || translateLoading}
                     >
-                      {loading ? 'Searching...' : 'Search Documents'}
+                      {loading ? 'Searching...' : 
+                       translateLoading ? 'Translating query...' : 
+                       'Search Documents'}
                     </Button>
                   </Grid>
                 </Grid>
@@ -560,6 +625,15 @@ const SearchPage = () => {
                     </Typography>
                     <Typography variant="body2" color="textSecondary">
                       Found {totalResults} document{totalResults !== 1 ? 's' : ''}
+                      {isMultiLanguageSearch && (
+                        <Chip 
+                          icon={<TranslateIcon />} 
+                          label="Multi-language" 
+                          size="small" 
+                          color="primary" 
+                          sx={{ ml: 1 }} 
+                        />
+                      )}
                     </Typography>
                   </Box>
                   

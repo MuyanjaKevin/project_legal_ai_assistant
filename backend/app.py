@@ -68,11 +68,18 @@ def create_app():
     from app.controllers.documents import documents_bp
     from app.controllers.contracts import contracts_bp
     from app.controllers.search import search_bp, setup_search_indexes  # Import the new search controller
-    
+    from app.controllers.settings import settings_bp
+    from app.controllers.advanced_analysis import advanced_analysis_bp
+    from app.controllers.translation import translation_bp
+
     app.register_blueprint(auth_bp, url_prefix='/api/auth')
     app.register_blueprint(documents_bp, url_prefix='/api/documents')
     app.register_blueprint(contracts_bp, url_prefix='/api/contracts')
-    app.register_blueprint(search_bp)  # The search blueprint already has /api/search prefix in its routes
+    app.register_blueprint(search_bp) 
+    app.register_blueprint(settings_bp, url_prefix='/api/settings') 
+    app.register_blueprint(advanced_analysis_bp, url_prefix='/api/advanced-analysis')
+    app.register_blueprint(translation_bp, url_prefix='/api/translation')
+    # The search blueprint already has /api/search prefix in its routes
     
     # Set up MongoDB indexes for search on application startup
     with app.app_context():
